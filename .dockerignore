@@ -1,0 +1,13 @@
+.git
+.gitignore
+__pycache__
+myenv311
+venv
+env
+*.pyc
+README.md
+package.json
+package-lock.json
+
+app/uploads/
+*.csv
