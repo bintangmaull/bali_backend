@@ -85,8 +85,6 @@
         <option value="">— Pilih —</option>
         <option value="gempa">Gempa</option>
         <option value="banjir">Banjir</option>
-        <option value="longsor">Longsor</option>
-        <option value="gunungberapi">Gunung Berapi</option>
       </select>
     </div>
     <div>
@@ -191,9 +189,7 @@ function formatRupiah(num) {
 const colors = ['#d73027', '#fc8d59', '#fee08b', '#d9ef8b', '#1a9850'];
 const periodMap = {
   gempa: [500, 250, 100],
-  banjir: [100, 50, 25],
-  longsor: [5, 2],
-  gunungberapi: [250, 100, 50]
+  banjir: [100, 50, 25]
 };
 
 // ===========================
@@ -282,7 +278,7 @@ function updateChoropleth() {
 // ===========================
 // 2) CHARTS Section
 // ===========================
-const hazardLabels = ['Gempa 500', 'Gempa 250', 'Gempa 100', 'Banjir 100', 'Banjir 50', 'Banjir 25', 'Longsor 2', 'Longsor 5', 'Gunung 250', 'Gunung 100', 'Gunung 50'];
+const hazardLabels = ['Gempa 500', 'Gempa 250', 'Gempa 100', 'Banjir 100', 'Banjir 50', 'Banjir 25'];
 
 let chartTotal, chartBmn, chartFs, chartFd;
 const provSelect = document.getElementById('provSelect');
@@ -324,30 +320,22 @@ function renderCharts(props) {
 
   chartTotal = makeChart('aalChart', 'Semua Bangunan', [
     props.aal_gempa_500_total, props.aal_gempa_250_total, props.aal_gempa_100_total,
-    props.aal_banjir_100_total, props.aal_banjir_50_total, props.aal_banjir_25_total,
-    props.aal_longsor_2_total, props.aal_longsor_5_total,
-    props.aal_gunungberapi_250_total, props.aal_gunungberapi_100_total, props.aal_gunungberapi_50_total
+    props.aal_banjir_100_total, props.aal_banjir_50_total, props.aal_banjir_25_total
   ], chartTotal);
 
   chartBmn = makeChart('bmnChart', 'BMN', [
     props.aal_gempa_500_bmn, props.aal_gempa_250_bmn, props.aal_gempa_100_bmn,
-    props.aal_banjir_100_bmn, props.aal_banjir_50_bmn, props.aal_banjir_25_bmn,
-    props.aal_longsor_2_bmn, props.aal_longsor_5_bmn,
-    props.aal_gunungberapi_250_bmn, props.aal_gunungberapi_100_bmn, props.aal_gunungberapi_50_bmn
+    props.aal_banjir_100_bmn, props.aal_banjir_50_bmn, props.aal_banjir_25_bmn
   ], chartBmn);
 
   chartFs = makeChart('fsChart', 'Fasilitas Kesehatan', [
     props.aal_gempa_500_fs, props.aal_gempa_250_fs, props.aal_gempa_100_fs,
-    props.aal_banjir_100_fs, props.aal_banjir_50_fs, props.aal_banjir_25_fs,
-    props.aal_longsor_2_fs, props.aal_longsor_5_fs,
-    props.aal_gunungberapi_250_fs, props.aal_gunungberapi_100_fs, props.aal_gunungberapi_50_fs
+    props.aal_banjir_100_fs, props.aal_banjir_50_fs, props.aal_banjir_25_fs
   ], chartFs);
 
   chartFd = makeChart('fdChart', 'Fasilitas Pendidikan', [
     props.aal_gempa_500_fd, props.aal_gempa_250_fd, props.aal_gempa_100_fd,
-    props.aal_banjir_100_fd, props.aal_banjir_50_fd, props.aal_banjir_25_fd,
-    props.aal_longsor_2_fd, props.aal_longsor_5_fd,
-    props.aal_gunungberapi_250_fd, props.aal_gunungberapi_100_fd, props.aal_gunungberapi_50_fd
+    props.aal_banjir_100_fd, props.aal_banjir_50_fd, props.aal_banjir_25_fd
   ], chartFd);
 }
 </script>
@@ -438,14 +426,7 @@ function renderCharts(props) {
             <b>Kerugian Banjir:</b><br/>
             &nbsp;&nbsp;100-th: ${formatRupiah(p.direct_loss_banjir_100)}<br/>
             &nbsp;&nbsp;50-th: ${formatRupiah(p.direct_loss_banjir_50)}<br/>
-            &nbsp;&nbsp;25-th: ${formatRupiah(p.direct_loss_banjir_25)}<br/>
-            <b>Kerugian Longsor:</b><br/>
-            &nbsp;&nbsp;5-th: ${formatRupiah(p.direct_loss_longsor_5)}<br/>
-            &nbsp;&nbsp;2-th: ${formatRupiah(p.direct_loss_longsor_2)}<br/>
-            <b>Kerugian Gunung Berapi:</b><br/>
-            &nbsp;&nbsp;250-th: ${formatRupiah(p.direct_loss_gunungberapi_250)}<br/>
-            &nbsp;&nbsp;100-th: ${formatRupiah(p.direct_loss_gunungberapi_100)}<br/>
-            &nbsp;&nbsp;50-th: ${formatRupiah(p.direct_loss_gunungberapi_50)}
+            &nbsp;&nbsp;25-th: ${formatRupiah(p.direct_loss_banjir_25)}
           `;
           const m = L.marker([lat, lon], { icon: icons[type] || icons.FD })
             .bindPopup(popup)
