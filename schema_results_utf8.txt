@@ -1,9 +1,0 @@
-Schema verification for id_lokasi:
-Table: dmg_ratio_gempa                | Column: id_lokasi  | Type: character varying
-Table: dmg_ratio_tsunami              | Column: id_lokasi  | Type: character varying
-Table: dmg_ratio_banjir_r             | Column: id_lokasi  | Type: character varying
-Table: dmg_ratio_banjir_rc            | Column: id_lokasi  | Type: character varying
-Table: model_intensitas_gempa         | Column: id_lokasi  | Type: character varying
-Table: model_intensitas_tsunami       | Column: id_lokasi  | Type: character varying
-Table: model_intensitas_banjir_r      | Column: id_lokasi  | Type: character varying
-Table: model_intensitas_banjir_rc     | Column: id_lokasi  | Type: character varying
