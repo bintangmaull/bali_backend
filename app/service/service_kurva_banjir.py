@@ -1,79 +1,63 @@
 # app/service/service_kurva_banjir.py
 
 import logging
+import numpy as np
 import pandas as pd
 from scipy.interpolate import CubicSpline
-
 from app.repository.repo_kurva_banjir import get_reference_curves_banjir
-from app.extensions import db
-from app.models.models_database import HasilProsesBanjir
 
 logger = logging.getLogger(__name__)
 
-def interpolate_spline(x, y, xi):
-    """Interpolasi CubicSpline, dibatasi di [0,1]."""
-    if pd.isna(xi):
-        return None
-    try:
-        spline = CubicSpline(x, y, extrapolate=True)
-        val = spline(float(xi))
-        return float(max(0, min(val, 1)))
-    except Exception as e:
-        logger.error(f"❌ Error interpolasi nilai {xi}: {e}")
-        return None
+R_SCALES = ['25', '50', '100', '250']
+RC_SCALES = ['25', '50', '100', '250']
 
-def process_data(input_data: pd.DataFrame) -> pd.DataFrame:
+def process_data_combined(input_data: pd.DataFrame) -> pd.DataFrame:
     """
-    Untuk setiap baris input_data:
-      - ambil referensi kurva tipe '1' & '2'
-      - interpolasi depth_100, 50, 25
-      - hasilkan kolom dmgratio_1_* dan dmgratio_2_*
+    Memproses interpolasi untuk R dan RC sekaligus.
+    Input DataFrame harus berisi: id_lokasi, r_25, r_50, r_100, r_250, rc_25, rc_50, rc_100, rc_250
     """
-    logger.info("📥 Memulai proses interpolasi Banjir...")
+    logger.info("📥 Memulai proses interpolasi Banjir (R & RC) Combined...")
 
-    # 1) Ambil referensi (tipe '1' & '2')
     reference_curves = get_reference_curves_banjir()
-
-    # 2) Salin dan cast kolom depth
     df = input_data.copy()
-    for col in ['depth_100', 'depth_50', 'depth_25']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Ensure numeric
+    for s in R_SCALES:
+        df[f'r_{s}'] = pd.to_numeric(df[f'r_{s}'], errors='coerce')
+    for s in RC_SCALES:
+        df[f'rc_{s}'] = pd.to_numeric(df[f'rc_{s}'], errors='coerce')
 
-    # 3) Inisialisasi kolom hasil
-    for tipe in ['1','2']:
-        for d in ['100','50','25']:
-            df[f'dmgratio_{tipe}_depth{d}'] = None
-
-    # 4) Interpolasi untuk tiap tipe
+    # Interpolasi untuk tiap tipe (lantai 1 vs 2)
     for tipe, ref in reference_curves.items():
         x_ref, y_ref = ref['x'], ref['y']
         if not x_ref or not y_ref:
-            logger.warning(f"⚠️ Referensi tipe {tipe} kosong: seluruh dmgratio_{tipe}_* = None")
             continue
+        
+        spline = CubicSpline(x_ref, y_ref, extrapolate=True)
+        
+        # Process R
+        for s in R_SCALES:
+            vals = df[f'r_{s}'].to_numpy()
+            valid_mask = ~np.isnan(vals)
+            interp_vals = np.zeros_like(vals)
+            interp_vals[valid_mask] = spline(vals[valid_mask].astype(float))
+            df[f'dmgratio_{tipe}_r{s}'] = np.where(valid_mask, np.clip(interp_vals, 0, 1), 0)
 
-        logger.info(f"📊 Interpolasi kurva tipe {tipe} (n={len(x_ref)})")
-        for d in ['100','50','25']:
-            in_col  = f'depth_{d}'
-            out_col = f'dmgratio_{tipe}_depth{d}'
-            df[out_col] = df[in_col].apply(lambda v: interpolate_spline(x_ref, y_ref, v))
+        # Process RC
+        for s in RC_SCALES:
+            vals = df[f'rc_{s}'].to_numpy()
+            valid_mask = ~np.isnan(vals)
+            interp_vals = np.zeros_like(vals)
+            interp_vals[valid_mask] = spline(vals[valid_mask].astype(float))
+            df[f'dmgratio_{tipe}_rc{s}'] = np.where(valid_mask, np.clip(interp_vals, 0, 1), 0)
 
-    # 5) Pilih kolom final
-    cols = ['id_lokasi'] + [
-        f'dmgratio_{t}_depth{d}'
-        for t in ['1','2'] for d in ['100','50','25']
-    ]
-    result = df[cols]
-
-    # 6) Simpan ke database (bulk: hapus lalu insert)
-    try:
-        db.session.query(HasilProsesBanjir).delete()
-        recs = result.to_dict(orient='records')
-        objs = [HasilProsesBanjir(**r) for r in recs]
-        db.session.bulk_save_objects(objs)
-        db.session.commit()
-        logger.info(f"✅ {len(objs)} records saved to {HasilProsesBanjir.__tablename__}")
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"❌ Gagal simpan dmgratio_banjir_copy: {e}")
-
+    # Reorder columns
+    cols = ['id_lokasi']
+    for t in ['1', '2']:
+        for s in R_SCALES: cols.append(f'dmgratio_{t}_r{s}')
+        for s in RC_SCALES: cols.append(f'dmgratio_{t}_rc{s}')
+        
+    result = df[cols].copy()
+    result['id_lokasi'] = result['id_lokasi'].astype(float).astype(int)
+    
     return result

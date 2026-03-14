@@ -18,8 +18,7 @@ from app.route.route_visualisasi_hazard import register_visualisasi_routes_hazar
 
 # (Optional) preload curves
 from app.repository.repo_kurva_gempa import get_reference_curves_gempa as load_gempa
-from app.repository.repo_kurva_gunungberapi import get_reference_curves_gunungberapi as load_gunung
-from app.repository.repo_kurva_longsor import get_reference_curves_longsor as load_longsor
+from app.repository.repo_kurva_tsunami import get_reference_curves_tsunami as load_tsunami
 from app.repository.repo_kurva_banjir import get_reference_curves_banjir as load_banjir
 
 # visualisasi kurva
@@ -33,10 +32,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Globals for curves
-REFERENCE_CURVES_GEMPA = {}
-REFERENCE_CURVES_GUNUNGBERAPI = {}
-REFERENCE_CURVES_LONGSOR = {}
-REFERENCE_CURVES_BANJIR = {}
+REFERENCE_CURVES_GEMPA   = {}
+REFERENCE_CURVES_TSUNAMI = {}
+REFERENCE_CURVES_BANJIR  = {}
 
 def create_app():
     app = Flask(__name__)
@@ -92,8 +90,7 @@ def _check_db_connection():
         logger.error(f"❌ Database connection failed: {e}")
 
 def _load_reference_curves():
-    global REFERENCE_CURVES_GEMPA, REFERENCE_CURVES_GUNUNGBERAPI
-    global REFERENCE_CURVES_LONGSOR, REFERENCE_CURVES_BANJIR
+    global REFERENCE_CURVES_GEMPA, REFERENCE_CURVES_TSUNAMI, REFERENCE_CURVES_BANJIR
 
     try:
         REFERENCE_CURVES_GEMPA = load_gempa()
@@ -103,18 +100,11 @@ def _load_reference_curves():
         REFERENCE_CURVES_GEMPA = {}
 
     try:
-        REFERENCE_CURVES_GUNUNGBERAPI = load_gunung()
-        logger.info("✅ Gunung Berapi curves loaded")
+        REFERENCE_CURVES_TSUNAMI = load_tsunami()
+        logger.info("✅ Tsunami curves loaded")
     except Exception as e:
-        logger.error(f"❌ Failed to load gunung berapi curves: {e}")
-        REFERENCE_CURVES_GUNUNGBERAPI = {}
-
-    try:
-        REFERENCE_CURVES_LONGSOR = load_longsor()
-        logger.info("✅ Longsor curves loaded")
-    except Exception as e:
-        logger.error(f"❌ Failed to load longsor curves: {e}")
-        REFERENCE_CURVES_LONGSOR = {}
+        logger.error(f"❌ Failed to load tsunami curves: {e}")
+        REFERENCE_CURVES_TSUNAMI = {}
 
     try:
         REFERENCE_CURVES_BANJIR = load_banjir()

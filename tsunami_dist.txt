@@ -1,0 +1,127 @@
+INFO:app:✅ CRUD & raw-data blueprints registered
+INFO:app:✅ Direct-loss visualization routes registered
+INFO:app.repository.repo_kurva_gempa:📥 Mengambil referensi kurva Gempa dari database...
+INFO:app.repository.repo_kurva_gempa:✅ Berhasil mengambil 144 referensi kurva Gempa.
+INFO:app:✅ Gempa curves loaded
+INFO:app.repository.repo_kurva_tsunami:📥 Mengambil referensi kurva Tsunami dari database...
+INFO:app.repository.repo_kurva_tsunami:✅ Berhasil mengambil 18 referensi kurva Tsunami.
+INFO:app:✅ Tsunami curves loaded
+INFO:app.repository.repo_kurva_banjir:📥 Mengambil referensi kurva Banjir...
+INFO:app.repository.repo_kurva_banjir:✅ Ditemukan 68 baris referensi (tipe 1 & 2 dipakai).
+INFO:app:✅ Banjir curves loaded
+Cek jarak minimum titik tsunami terdekat dari 10 bangunan pertama:
+  id=FD_2780, jarak terdekat ke tsunami: 33.5m
+  id=FD_2781, jarak terdekat ke tsunami: 45.2m
+  id=ELECTRICITY_1552, jarak terdekat ke tsunami: 52.6m
+  id=ELECTRICITY_1550, jarak terdekat ke tsunami: 61.7m
+  id=FD_3190, jarak terdekat ke tsunami: 63.7m
+  id=ELECTRICITY_1551, jarak terdekat ke tsunami: 67.0m
+  id=ELECTRICITY_1328, jarak terdekat ke tsunami: 96.7m
+  id=FD_2782, jarak terdekat ke tsunami: 98.2m
+  id=FD_2783, jarak terdekat ke tsunami: 105.1m
+  id=FD_3189, jarak terdekat ke tsunami: 108.0m
+
+Jumlah bangunan yg punya titik tsunami dalam radius 1km:
+  3161
+
+Jumlah bangunan yg punya titik tsunami dalam radius 100km:
+Traceback (most recent call last):
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.QueryCanceled: canceling statement due to statement timeout
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\Dashboard\backend-capstone-aal\check_tsunami_dist.py", line 48, in <module>
+    check()
+    ~~~~~^^
+  File "E:\Dashboard\backend-capstone-aal\check_tsunami_dist.py", line 44, in check
+    cnt3 = db.session.execute(q3).scalar()
+           ~~~~~~~~~~~~~~~~~~^^^^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\orm\scoping.py", line 779, in execute
+    return self._proxied.execute(
+           ~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\orm\session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\orm\session.py", line 2260, in _execute_internal
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Dashboard\backend-capstone-aal\myenv311\Lib\site-packages\sqlalchemy\engine\default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.errors.QueryCanceled) canceling statement due to statement timeout
+
+[SQL: 
+            SELECT COUNT(DISTINCT b.id_bangunan) as cnt
+            FROM bangunan_copy b
+            JOIN model_intensitas_tsunami r ON ST_DWithin(b.geom::geography, r.geom::geography, 100000)
+        ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

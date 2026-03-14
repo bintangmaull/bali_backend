@@ -5,7 +5,6 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from app.config import Config
 
-# Direktori Debug (opsional)
 DEBUG_DIR = os.path.join(os.getcwd(), "debug_output")
 os.makedirs(DEBUG_DIR, exist_ok=True)
 
@@ -26,10 +25,12 @@ def get_bangunan_data():
             b.nama_gedung,
             b.alamat,
             b.kode_bangunan,
+            b.taxonomy,
             b.provinsi,
             b.kota,
             b.jumlah_lantai,
-            COALESCE(k.hsbgn, 0.0) AS hsbgn
+            COALESCE(k.hsbgn_sederhana, 0.0) AS hsbgn_sederhana,
+            COALESCE(k.hsbgn_tidaksederhana, 0.0) AS hsbgn_tidaksederhana
         FROM bangunan_copy b
         LEFT JOIN kota k ON b.kota = k.kota;
     """)
@@ -47,10 +48,12 @@ def get_city_bangunan_data(kota_name):
             b.nama_gedung,
             b.alamat,
             b.kode_bangunan,
+            b.taxonomy,
             b.provinsi,
             b.kota,
             b.jumlah_lantai,
-            COALESCE(k.hsbgn, 0.0) AS hsbgn
+            COALESCE(k.hsbgn_sederhana, 0.0) AS hsbgn_sederhana,
+            COALESCE(k.hsbgn_tidaksederhana, 0.0) AS hsbgn_tidaksederhana
         FROM bangunan_copy b
         LEFT JOIN kota k ON b.kota = k.kota
         WHERE b.kota = :kota;
@@ -59,62 +62,72 @@ def get_city_bangunan_data(kota_name):
     with engine.connect() as conn:
         return pd.read_sql(query, conn, params={"kota": kota_name})
 
-def get_all_disaster_data():
+
+def _vcols_taxonomy(pre, s):
+    """Kolom dmgratio per taksonomi (cr, mcf) untuk gempa & tsunami."""
+    return [
+        f"h.dmgratio_cr_{pre}{s}   AS nilai_y_cr_{pre}{s}",
+        f"h.dmgratio_mcf_{pre}{s}  AS nilai_y_mcf_{pre}{s}",
+    ]
+
+def _vcols_lantai(pre, s):
+    """Kolom dmgratio per jumlah lantai (1 vs 2) untuk banjir_r & banjir_rc."""
+    return [
+        f"h.dmgratio_1_{pre}{s} AS nilai_y_1_{pre}{s}",
+        f"h.dmgratio_2_{pre}{s} AS nilai_y_2_{pre}{s}",
+    ]
+
+
+# =============================================================================
+# Mapping konfigurasi bencana untuk query
+# PREFIX: nama prefix kolom di tabel dmg_ratio_*
+# SUFFIX: suffix kolom (misal pga100, inundansi, r25, rc25)
+# =============================================================================
+DISASTER_MAPPING = {
+    "gempa": {
+        "raw":       "model_intensitas_gempa",
+        "dmgr":      "dmg_ratio_gempa",
+        "prefix":    "pga",
+        "scales":    ["100", "200", "250", "500", "1000"],
+        "threshold": 525,
+        "vcols":     _vcols_taxonomy,
+        "mode":      "taxonomy",   # cr/mcf/mur/w based
+    },
+    "tsunami": {
+        "raw":       "model_intensitas_tsunami",
+        "dmgr":      "dmg_ratio_tsunami",
+        "prefix":    "",
+        "scales":    ["inundansi"],
+        "threshold": 110,
+        "vcols":     lambda pre, s: _vcols_taxonomy("", "inundansi"),
+        "mode":      "taxonomy",
+    },
+    "banjir_r": {
+        "raw":       "model_intensitas_banjir",
+        "dmgr":      "dmg_ratio_banjir",
+        "prefix":    "r",
+        "scales":    ["2", "5", "10", "25", "50", "100", "250"],
+        "threshold": 17,
+        "vcols":     _vcols_lantai,
+        "mode":      "lantai",     # jumlah_lantai based
+    },
+    "banjir_rc": {
+        "raw":       "model_intensitas_banjir",
+        "dmgr":      "dmg_ratio_banjir",
+        "prefix":    "rc",
+        "scales":    ["2", "5", "10", "25", "50", "100", "250"],
+        "threshold": 17,
+        "vcols":     _vcols_lantai,
+        "mode":      "lantai",
+    },
+}
+
+
+def _build_disaster_query(mapping, kota_name=None):
     """
-    Untuk tiap jenis bencana:
-     - Filter titik intensitas dalam 'threshold' (meter via geography)
-     - Cari nearest dengan KNN (<->) di geography
-     - Ambil nilai vulnerability via dmgratio_*
+    Bangun query SQL untuk tiap bencana menggunakan LATERAL JOIN nearest neighbour.
+    Jika kota_name diberikan, filter bangunan per kota.
     """
-    def vcols_gempa(pre, s):
-        return [
-            f"h.dmgratio_cr_{pre}{s}         AS nilai_y_cr_{pre}{s}",
-            f"h.dmgratio_mcf_{pre}{s}        AS nilai_y_mcf_{pre}{s}",
-            f"h.dmgratio_mur_{pre}{s}        AS nilai_y_mur_{pre}{s}",
-            f"h.dmgratio_lightwood_{pre}{s}  AS nilai_y_lightwood_{pre}{s}",
-        ]
-
-    def vcols_banjir(pre, s):
-        return [
-            f"h.dmgratio_1_{pre}{s} AS nilai_y_1_{pre}{s}",
-            f"h.dmgratio_2_{pre}{s} AS nilai_y_2_{pre}{s}",
-        ]
-
-    mapping = {
-        "gempa": {
-            "raw":      "model_intensitas_gempa",
-            "dmgr":     "dmgratio_gempa",
-            "prefix":   "mmi",
-            "scales":   ["500","250","100"],
-            "threshold": 9500,
-            "vcols":    vcols_gempa
-        },
-        "banjir": {
-            "raw":      "model_intensitas_banjir",
-            "dmgr":     "dmgratio_banjir_copy",
-            "prefix":   "depth",
-            "scales":   ["100","50","25"],
-            "threshold": 700,
-            "vcols":    vcols_banjir
-        },
-        "longsor": {
-            "raw":      "model_intensitas_longsor",
-            "dmgr":     "dmgratio_longsor",
-            "prefix":   "mflux",
-            "scales":   ["5","2"],
-            "threshold": 700,
-            "vcols":    vcols_gempa
-        },
-        "gunungberapi": {
-            "raw":      "model_intensitas_gunungberapi",
-            "dmgr":     "dmgratio_gunungberapi",
-            "prefix":   "kpa",
-            "scales":   ["250","100","50"],
-            "threshold": 550,
-            "vcols":    vcols_gempa
-        }
-    }
-
     engine = get_db_connection()
     all_data = {}
 
@@ -132,134 +145,49 @@ def get_all_disaster_data():
             for s in scales:
                 for expr in make_vcols(pre, s):
                     subq_parts.append(expr)
-                    alias = expr.split(" AS ")[1]
+                    alias = expr.split(" AS ")[1].strip()
                     sel_parts.append(f"near.{alias}")
 
-            subq_cols   = ",\n       ".join(subq_parts)
-            outer_cols  = ",\n  ".join(sel_parts)
+            subq_cols  = ",\n       ".join(subq_parts)
+            outer_cols = ",\n  ".join(sel_parts)
+
+            if kota_name:
+                from_clause = "(SELECT id_bangunan, geom FROM bangunan_copy WHERE kota = :kota) b"
+            else:
+                from_clause = "bangunan_copy b"
 
             sql = f"""
                 SELECT
                   b.id_bangunan,
                   {outer_cols}
-                FROM bangunan_copy b
+                FROM {from_clause}
                 JOIN LATERAL (
                   SELECT
                     {subq_cols}
                   FROM {raw_table} r
-                  JOIN {dmgr_table} h USING(id_lokasi)
+                  JOIN {dmgr_table} h ON r.id_lokasi::varchar = h.id_lokasi::varchar
                   WHERE ST_DWithin(
-                    b.geom::geography,
-                    r.geom::geography,
-                    {threshold}
+                    b.geom,
+                    r.geom,
+                    {threshold} / 111320.0
                   )
-                  ORDER BY b.geom::geography <-> r.geom::geography
+                  ORDER BY b.geom <-> r.geom
                   LIMIT 1
                 ) AS near ON TRUE;
             """
 
-            df = pd.read_sql(text(sql), conn)
+            params = {"kota": kota_name} if kota_name else {}
+            df = pd.read_sql(text(sql), conn, params=params)
             all_data[name] = df
 
     return all_data
+
+
+def get_all_disaster_data():
+    """Ambil data dmgratio seluruh bangunan untuk 4 bencana."""
+    return _build_disaster_query(DISASTER_MAPPING)
+
 
 def get_city_disaster_data(kota_name):
-    """
-    Sama dengan get_all_disaster_data tapi difilter per KOTA.
-    """
-    def vcols_gempa(pre, s):
-        return [
-            f"h.dmgratio_cr_{pre}{s}         AS nilai_y_cr_{pre}{s}",
-            f"h.dmgratio_mcf_{pre}{s}        AS nilai_y_mcf_{pre}{s}",
-            f"h.dmgratio_mur_{pre}{s}        AS nilai_y_mur_{pre}{s}",
-            f"h.dmgratio_lightwood_{pre}{s}  AS nilai_y_lightwood_{pre}{s}",
-        ]
-
-    def vcols_banjir(pre, s):
-        return [
-            f"h.dmgratio_1_{pre}{s} AS nilai_y_1_{pre}{s}",
-            f"h.dmgratio_2_{pre}{s} AS nilai_y_2_{pre}{s}",
-        ]
-
-    mapping = {
-        "gempa": {
-            "raw":      "model_intensitas_gempa",
-            "dmgr":     "dmgratio_gempa",
-            "prefix":   "mmi",
-            "scales":   ["500","250","100"],
-            "threshold": 9500,
-            "vcols":    vcols_gempa
-        },
-        "banjir": {
-            "raw":      "model_intensitas_banjir",
-            "dmgr":     "dmgratio_banjir_copy",
-            "prefix":   "depth",
-            "scales":   ["100","50","25"],
-            "threshold": 700,
-            "vcols":    vcols_banjir
-        },
-        "longsor": {
-            "raw":      "model_intensitas_longsor",
-            "dmgr":     "dmgratio_longsor",
-            "prefix":   "mflux",
-            "scales":   ["5","2"],
-            "threshold": 700,
-            "vcols":    vcols_gempa
-        },
-        "gunungberapi": {
-            "raw":      "model_intensitas_gunungberapi",
-            "dmgr":     "dmgratio_gunungberapi",
-            "prefix":   "kpa",
-            "scales":   ["250","100","50"],
-            "threshold": 550,
-            "vcols":    vcols_gempa
-        }
-    }
-
-    engine = get_db_connection()
-    all_data = {}
-
-    with engine.connect() as conn:
-        for name, cfg in mapping.items():
-            raw_table  = cfg["raw"]
-            dmgr_table = cfg["dmgr"]
-            pre        = cfg["prefix"]
-            scales     = cfg["scales"]
-            threshold  = cfg["threshold"]
-            make_vcols = cfg["vcols"]
-
-            subq_parts = []
-            sel_parts  = []
-            for s in scales:
-                for expr in make_vcols(pre, s):
-                    subq_parts.append(expr)
-                    alias = expr.split(" AS ")[1]
-                    sel_parts.append(f"near.{alias}")
-
-            subq_cols   = ",\n       ".join(subq_parts)
-            outer_cols  = ",\n  ".join(sel_parts)
-
-            sql = f"""
-                SELECT
-                  b.id_bangunan,
-                  {outer_cols}
-                FROM (SELECT id_bangunan, geom FROM bangunan_copy WHERE kota = :kota) b
-                JOIN LATERAL (
-                  SELECT
-                    {subq_cols}
-                  FROM {raw_table} r
-                  JOIN {dmgr_table} h USING(id_lokasi)
-                  WHERE ST_DWithin(
-                    b.geom::geography,
-                    r.geom::geography,
-                    {threshold}
-                  )
-                  ORDER BY b.geom::geography <-> r.geom::geography
-                  LIMIT 1
-                ) AS near ON TRUE;
-            """
-
-            df = pd.read_sql(text(sql), conn, params={"kota": kota_name})
-            all_data[name] = df
-
-    return all_data
+    """Ambil data dmgratio bangunan di satu kota untuk 4 bencana."""
+    return _build_disaster_query(DISASTER_MAPPING, kota_name=kota_name)

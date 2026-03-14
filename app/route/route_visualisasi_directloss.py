@@ -106,9 +106,9 @@ def download_aal():
 
     copy_sql = """
     COPY (
-      SELECT *
-      FROM hasil_aal_kota
-      ORDER BY provinsi
+      SELECT h.*
+      FROM hasil_aal_kota h
+      ORDER BY h.id_kota
     ) TO STDOUT WITH CSV HEADER
     """
 
@@ -171,9 +171,9 @@ def download_aal_kota():
 
     copy_sql = """
     COPY (
-      SELECT *
-      FROM hasil_aal_kota
-      ORDER BY provinsi, kota
+      SELECT h.*
+      FROM hasil_aal_kota h
+      ORDER BY h.id_kota
     ) TO STDOUT WITH CSV HEADER
     """
 

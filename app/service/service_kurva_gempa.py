@@ -1,13 +1,17 @@
-# app/service/service_gempa.py
+# app/service/service_kurva_gempa.py
 
 import logging
+import numpy as np
 import pandas as pd
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import interp1d
 from app.repository.repo_kurva_gempa import get_reference_curves_gempa
 from app.extensions import db
 from app.models.models_database import HasilProsesGempa
 
 logger = logging.getLogger(__name__)
+
+PGA_SCALES = ['100', '200', '250', '500', '1000']
+TAXONOMY_TYPES = ['cr', 'mcf']
 
 def to_float(v):
     """Helper: None if NaN/None, else Python float."""
@@ -15,22 +19,13 @@ def to_float(v):
         return None
     return float(v)
 
-def interpolate_spline(x, y, xi):
-    """CubicSpline + clamp [0,1]."""
-    if pd.isna(xi):
-        return None
-    try:
-        spline = CubicSpline(x, y, extrapolate=True)
-        val = spline(float(xi))
-        return float(max(0, min(val, 1)))
-    except Exception as e:
-        logger.error(f"❌ ERROR interpolasi nilai {xi}: {e}")
-        return None
+# interpolate_spline function removed in favor of vectorized approach below
 
 def process_data(input_data):
     """
-    Proses data Gempa: interpolasi CR, MCF, MUR, Lightwood untuk MMI500/250/100.
-    Simpan ke dmgratio_gempa (bulk insert/update).
+    Proses data Gempa: interpolasi CR, MCF, MUR, W untuk PGA 100/200/250/500/1000.
+    Input DataFrame harus berisi kolom: id_lokasi, pga_100, pga_200, pga_250, pga_500, pga_1000
+    Simpan ke dmg_ratio_gempa (bulk insert/update).
     """
     logger.info("📥 Mulai interpolasi data Gempa...")
     rc = get_reference_curves_gempa()
@@ -39,86 +34,72 @@ def process_data(input_data):
         return pd.DataFrame()
 
     df = input_data.copy()
-    for c in ['MMI500','MMI250','MMI100']:
-        df[c] = pd.to_numeric(df[c], errors='coerce')
+    for s in PGA_SCALES:
+        df[f'pga_{s}'] = pd.to_numeric(df[f'pga_{s}'], errors='coerce')
 
-    # interpolasi
+    # Interpolasi per tipe kurva per skala
     for tipe, ref in rc.items():
         x_ref, y_ref = ref['x'], ref['y']
         logger.info(f"📊 Kurva {tipe}: X={x_ref}, Y={y_ref}")
-        for m in ['500','250','100']:
-            in_col, out_col = f'MMI{m}', f'dmgratio_{tipe.lower()}_mmi{m}'
-            df[out_col] = df[in_col].apply(lambda v: interpolate_spline(x_ref, y_ref, v))
+        
+        if len(x_ref) < 2:
+            logger.warning(f"⚠️ Titik kurva {tipe} < 2, dilewati.")
+            continue
+            
+        # Buat interpolator linear sekali untuk tiap kurva
+        interp_func = interp1d(x_ref, y_ref, kind='linear', fill_value='extrapolate')
+        
+        for s in PGA_SCALES:
+            in_col  = f'pga_{s}'
+            out_col = f'dmgratio_{tipe.lower()}_pga{s}'
+            
+            # Vektorisasi: Jalankan spline pada seluruh kolom sekaligus
+            vals = df[in_col].to_numpy()
+            valid_mask = ~np.isnan(vals)
+            
+            interp_vals = np.zeros_like(vals)
+            interp_vals[valid_mask] = interp_func(vals[valid_mask].astype(float))
+            # Clamp [0, 1]
+            interp_vals = np.clip(interp_vals, 0, 1)
+            
+            # Pasang None untuk yang NaN asli
+            df[out_col] = np.where(valid_mask, interp_vals, None)
 
-    # enforce cr ≤ mcf ≤ mur ≤ lightwood
-    for m in ['500','250','100']:
-        cr, mcf, mur, lw = (
-            f'dmgratio_cr_mmi{m}',
-            f'dmgratio_mcf_mmi{m}',
-            f'dmgratio_mur_mmi{m}',
-            f'dmgratio_lightwood_mmi{m}',
-        )
+    # Enforce ordering: cr ≤ mcf
+    for s in PGA_SCALES:
+        cr  = f'dmgratio_cr_pga{s}'
+        mcf = f'dmgratio_mcf_pga{s}'
         df[mcf] = df[[cr, mcf]].max(axis=1)
-        df[mur] = df[[mcf, mur]].max(axis=1)
-        df[lw]  = df[[mur, lw]].max(axis=1)
 
-    # siapkan result & cast Python float/None
+    # Siapkan result
     cols = ['id_lokasi'] + [
-        f'dmgratio_{t.lower()}_mmi{m}'
-        for t in rc.keys() for m in ['500','250','100']
+        f'dmgratio_{t}_pga{s}'
+        for s in PGA_SCALES for t in TAXONOMY_TYPES
     ]
-    result = df[cols].applymap(to_float)
+    result = df[cols].copy()
+    # Pastikan id_lokasi adalah integer (tidak ada .0 jika disimpan ke varchar)
+    result['id_lokasi'] = result['id_lokasi'].astype(float).astype(int)
+    
+    # Kolom damage ratio tetap float
+    dmgr_cols = [c for c in cols if c != 'id_lokasi']
+    result[dmgr_cols] = result[dmgr_cols].applymap(to_float)
+    
     logger.info(f"✅ Interpolasi selesai: {len(result)} baris.")
 
-    # bulk insert/update
+    # Simpan ke Database (Clear & Bulk Insert agar lebih stabil)
     try:
-        existing = {i for (i,) in db.session.query(HasilProsesGempa.id_lokasi).all()}
-        to_ins, to_upd = [], []
-
-        for _, row in result.iterrows():
-            rec = HasilProsesGempa(
-                id_lokasi = int(row['id_lokasi']),
-                dmgratio_cr_mmi500        = to_float(row['dmgratio_cr_mmi500']),
-                dmgratio_mcf_mmi500       = to_float(row['dmgratio_mcf_mmi500']),
-                dmgratio_mur_mmi500       = to_float(row['dmgratio_mur_mmi500']),
-                dmgratio_lightwood_mmi500 = to_float(row['dmgratio_lightwood_mmi500']),
-                dmgratio_cr_mmi250        = to_float(row['dmgratio_cr_mmi250']),
-                dmgratio_mcf_mmi250       = to_float(row['dmgratio_mcf_mmi250']),
-                dmgratio_mur_mmi250       = to_float(row['dmgratio_mur_mmi250']),
-                dmgratio_lightwood_mmi250 = to_float(row['dmgratio_lightwood_mmi250']),
-                dmgratio_cr_mmi100        = to_float(row['dmgratio_cr_mmi100']),
-                dmgratio_mcf_mmi100       = to_float(row['dmgratio_mcf_mmi100']),
-                dmgratio_mur_mmi100       = to_float(row['dmgratio_mur_mmi100']),
-                dmgratio_lightwood_mmi100 = to_float(row['dmgratio_lightwood_mmi100']),
-            )
-            (to_upd if rec.id_lokasi in existing else to_ins).append(rec)
-
-        with db.session.no_autoflush:
-            if to_ins:
-                db.session.bulk_save_objects(to_ins)
-                logger.info(f"✅ {len(to_ins)} records inserted.")
-            if to_upd:
-                for rec in to_upd:
-                    ex = db.session.get(HasilProsesGempa, rec.id_lokasi)
-                    # assign ulang
-                    ex.dmgratio_cr_mmi500        = rec.dmgratio_cr_mmi500
-                    ex.dmgratio_mcf_mmi500       = rec.dmgratio_mcf_mmi500
-                    ex.dmgratio_mur_mmi500       = rec.dmgratio_mur_mmi500
-                    ex.dmgratio_lightwood_mmi500 = rec.dmgratio_lightwood_mmi500
-                    ex.dmgratio_cr_mmi250        = rec.dmgratio_cr_mmi250
-                    ex.dmgratio_mcf_mmi250       = rec.dmgratio_mcf_mmi250
-                    ex.dmgratio_mur_mmi250       = rec.dmgratio_mur_mmi250
-                    ex.dmgratio_lightwood_mmi250 = rec.dmgratio_lightwood_mmi250
-                    ex.dmgratio_cr_mmi100        = rec.dmgratio_cr_mmi100
-                    ex.dmgratio_mcf_mmi100       = rec.dmgratio_mcf_mmi100
-                    ex.dmgratio_mur_mmi100       = rec.dmgratio_mur_mmi100
-                    ex.dmgratio_lightwood_mmi100 = rec.dmgratio_lightwood_mmi100
-                logger.info(f"✅ {len(to_upd)} records updated.")
-
+        # 1. Hapus data lama
+        db.session.query(HasilProsesGempa).delete()
+        
+        # 2. Siapkan data untuk bulk insert
+        mappings = result.to_dict('records')
+        
+        # 3. Bulk insert
+        db.session.bulk_insert_mappings(HasilProsesGempa, mappings)
         db.session.commit()
-        logger.info("✅ Semua perubahan tersimpan di tabel dmgratio_gempa.")
+        logger.info(f"✅ Berhasil menyimpan {len(mappings)} data ke tabel dmg_ratio_gempa.")
     except Exception as e:
         db.session.rollback()
-        logger.error(f"❌ Gagal simpan data Gempa: {e}")
+        logger.error(f"❌ Gagal simpan data Gempa ke database: {e}")
 
     return result

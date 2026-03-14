@@ -2,26 +2,23 @@
 
 from app.models.models_database import (
     GempaReferenceCurve,
+    TsunamiReferenceCurve,
     BanjirReferenceCurve,
-    GunungBerapiReferenceCurve,
-    LongsorReferenceCurve
 )
 
 def get_all_disaster_curves():
-    # Peta nama tabel ke Model SQLAlchemy
+    # Peta nama ke Model SQLAlchemy
+    # banjir digunakan untuk banjir_r dan banjir_rc (sama-sama pakai BanjirReferenceCurve)
     mapping = {
-        "gempa": GempaReferenceCurve,
-        "banjir": BanjirReferenceCurve,
-        "gunungberapi": GunungBerapiReferenceCurve,
-        "longsor": LongsorReferenceCurve
+        "gempa":     GempaReferenceCurve,
+        "tsunami":   TsunamiReferenceCurve,
+        "banjir":    BanjirReferenceCurve,
     }
 
     all_curves = {}
     for disaster, Model in mapping.items():
-        # ambil semua baris, sort dulu by tipe_kurva lalu by x
         rows = Model.query.order_by(Model.tipe_kurva, Model.x).all()
 
-        # kelompokkan per tipe_kurva
         grouped = {}
         for row in rows:
             t = row.tipe_kurva

@@ -1,0 +1,17 @@
+INFO:app:✅ CRUD & raw-data blueprints registered
+INFO:app:✅ Direct-loss visualization routes registered
+INFO:app.repository.repo_kurva_gempa:📥 Mengambil referensi kurva Gempa dari database...
+INFO:app.repository.repo_kurva_gempa:✅ Berhasil mengambil 144 referensi kurva Gempa.
+INFO:app:✅ Gempa curves loaded
+INFO:app.repository.repo_kurva_tsunami:📥 Mengambil referensi kurva Tsunami dari database...
+INFO:app.repository.repo_kurva_tsunami:✅ Berhasil mengambil 18 referensi kurva Tsunami.
+INFO:app:✅ Tsunami curves loaded
+INFO:app.repository.repo_kurva_banjir:📥 Mengambil referensi kurva Banjir...
+INFO:app.repository.repo_kurva_banjir:✅ Ditemukan 68 baris referensi (tipe 1 & 2 dipakai).
+INFO:app:✅ Banjir curves loaded
+Jarak antar titik tsunami (estimasi grid spacing):
+  avg=2.0m, min=0.0m, max=195.4m
+  threshold=500m -> 191/500 bangunan match
+  threshold=1000m -> 271/500 bangunan match
+  threshold=2000m -> 408/500 bangunan match
+  threshold=5000m -> 493/500 bangunan match

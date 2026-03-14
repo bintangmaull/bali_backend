@@ -68,7 +68,7 @@ class HSBGNController:
         """Menambahkan HSBGN baru"""
         try:
             data = request.json
-            required_fields = ["kota", "provinsi", "hsbgn"]
+            required_fields = ["kota", "provinsi", "hsbgn_sederhana", "hsbgn_tidaksederhana"]
 
             # Validasi apakah semua field wajib ada
             missing_fields = [field for field in required_fields if field not in data]
@@ -121,8 +121,8 @@ class HSBGNController:
     def get_kota_by_provinsi(provinsi):
         """Mengambil daftar kota unik berdasarkan provinsi"""
         try:
-            all_data = HSBGNService.get_all_hsbgn()
-            kotas = sorted({item['kota'] for item in all_data if item['provinsi'] == provinsi})
+            from app.repository.repo_crud_hsbgn import HSBGNRepository
+            kotas = HSBGNRepository.get_kota_by_provinsi(provinsi)
             return jsonify(kotas), 200
         except Exception as e:
             loggerhsgbn.error(f"Error saat mengambil kota untuk provinsi {provinsi}: {e}")
@@ -130,14 +130,10 @@ class HSBGNController:
 
     @staticmethod
     def get_all_kota():
-        """Mengambil nama kota unik langsung dari tabel bangunan_copy (tanpa geometri)"""
+        """Mengambil nama kota unik dari master tabel hsbgn"""
         try:
-            from app.extensions import db
-            from sqlalchemy import text
-            rows = db.session.execute(
-                text("SELECT DISTINCT kota FROM bangunan_copy WHERE kota IS NOT NULL ORDER BY kota")
-            ).fetchall()
-            kotas = [r[0] for r in rows if r[0]]
+            from app.repository.repo_crud_hsbgn import HSBGNRepository
+            kotas = HSBGNRepository.get_all_kotas()
             return jsonify(kotas), 200
         except Exception as e:
             loggerhsgbn.error(f"Error saat mengambil semua kota: {e}")

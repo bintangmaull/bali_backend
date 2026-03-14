@@ -1,0 +1,29 @@
+﻿
+--- TABLE_SIZES ---
+                        Table Total_Size Table_Size Index_Size  Approx_Rows
+0  model_intensitas_banjir_rc     154 MB      66 MB      89 MB       814650
+1   model_intensitas_banjir_r     154 MB      66 MB      89 MB       814650
+2          dmg_ratio_banjir_r      71 MB      53 MB      17 MB       814650
+3         dmg_ratio_banjir_rc      71 MB      53 MB      17 MB       814650
+
+--- COLUMN_TYPES ---
+                    table_name column_name         data_type
+0    model_intensitas_banjir_r         lon  double precision
+1    model_intensitas_banjir_r         lat  double precision
+2    model_intensitas_banjir_r        r_25              real
+3    model_intensitas_banjir_r        r_50              real
+4    model_intensitas_banjir_r       r_100              real
+5    model_intensitas_banjir_r       r_250              real
+6   model_intensitas_banjir_rc         lon  double precision
+7   model_intensitas_banjir_rc         lat  double precision
+8   model_intensitas_banjir_rc       rc_25              real
+9   model_intensitas_banjir_rc       rc_50              real
+10  model_intensitas_banjir_rc      rc_100              real
+11  model_intensitas_banjir_rc      rc_250              real
+
+--- INDEXES ---
+                    tablename                            indexname Index_Pretty_Size
+0   model_intensitas_banjir_r   idx_model_intensitas_banjir_r_geog             71 MB
+1   model_intensitas_banjir_r               idx_banjir_r_id_lokasi             17 MB
+2  model_intensitas_banjir_rc  idx_model_intensitas_banjir_rc_geog             71 MB
+3  model_intensitas_banjir_rc              idx_banjir_rc_id_lokasi             17 MB

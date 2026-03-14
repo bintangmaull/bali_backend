@@ -1,16 +1,16 @@
 from app.models.models_database import (
     GempaReferenceCurve,
+    TsunamiReferenceCurve,
     BanjirReferenceCurve,
-    GunungBerapiReferenceCurve,
-    LongsorReferenceCurve,
 )
 
 def get_disaster_data(disaster_type):
     model_map = {
-        "gempa": GempaReferenceCurve,
-        "banjir": BanjirReferenceCurve,
-        "gunungberapi": GunungBerapiReferenceCurve,
-        "longsor": LongsorReferenceCurve,
+        "gempa":     GempaReferenceCurve,
+        "tsunami":   TsunamiReferenceCurve,
+        "banjir":    BanjirReferenceCurve,      # dipakai untuk banjir_r dan banjir_rc
+        "banjir_r":  BanjirReferenceCurve,
+        "banjir_rc": BanjirReferenceCurve,
     }
 
     model = model_map.get(disaster_type)

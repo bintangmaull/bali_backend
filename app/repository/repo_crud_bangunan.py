@@ -62,7 +62,8 @@ class BangunanRepository:
             .order_by(Bangunan.provinsi)
             .all()
         )
-        return [r[0] for r in rows]
+        # Return as is, or unique sorted
+        return sorted(list(set(r[0].upper() for r in rows if r[0])))
 
     @staticmethod
     def get_kota_list(provinsi=None):
@@ -70,11 +71,12 @@ class BangunanRepository:
         Ambil daftar kota unik. Jika provinsi diberikan, filter sesuai provinsi.
         Jika tidak, kembalikan semua kota unik.
         """
+        from sqlalchemy import func
         q = db.session.query(Bangunan.kota).distinct()
         if provinsi:
-            q = q.filter(Bangunan.provinsi == provinsi)
+            q = q.filter(func.lower(Bangunan.provinsi) == provinsi.lower())
         rows = q.order_by(Bangunan.kota).all()
-        return [r[0] for r in rows]
+        return sorted(list(set(r[0].upper() for r in rows if r[0])))
 
     @staticmethod
     def create(data):

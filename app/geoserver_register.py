@@ -1,5 +1,6 @@
 import os
 import tempfile
+from typing import Dict, Any, List, cast
 import requests
 from requests.auth import HTTPBasicAuth
 
@@ -16,10 +17,10 @@ WORKSPACE      = "ne"
 
 # definisi bencana → kolom
 BENCANA_MAP = {
-    'gempa':       ['mmi_100',    'mmi_250',   'mmi_500'],
-    'banjir':      ['depth_25',   'depth_50',  'depth_100'],
-    'longsor':     ['mflux_2',    'mflux_5'],
-    'gunungberapi':['kpa_50',     'kpa_100',   'kpa_250']
+    'gempa':    ['pga_100', 'pga_200', 'pga_250', 'pga_500', 'pga_1000'],
+    'tsunami':  ['inundansi'],
+    'banjir_r': ['r_25', 'r_50', 'r_100', 'r_250'],
+    'banjir_rc':['rc_25', 'rc_50', 'rc_100', 'rc_250'],
 }
 
 
@@ -57,14 +58,15 @@ def make_sld(layer_name, breaks):
     # 2) Entry untuk natural breaks > 0
     lower = 0.0
     for i, thr in enumerate(breaks):
-        upper = thr
+        upper = float(thr)
         color = pos_colors[i] if i < len(pos_colors) else pos_colors[-1]
-        entries.append(f"""
+        line = f"""
       <ColorMapEntry
         color="{color}"
         quantity="{upper:.6f}"
         label="{lower:.2f}-{upper:.2f}"/>
-        """)
+        """
+        entries.append(str(line))
         lower = upper
 
     cmap = "\n".join(entries)
@@ -161,12 +163,13 @@ def upload_all_geotiffs():
     for bencana, koloms in BENCANA_MAP.items():
         for kolom in koloms:
             layer_name = f"hazard_{bencana}_{kolom}"
-            rec = {'layer': layer_name}
+            rec: Dict[str, Any] = {'layer': layer_name}
             try:
                 # generate .tif
                 tif_path, err = RasterService.generate_raster_from_points(bencana, kolom)
                 if err:
-                    rec.update(status='error', message=err)
+                    rec['status'] = 'error'
+                    rec['message'] = str(err)
                     hasil.append(rec)
                     continue
 
@@ -184,16 +187,18 @@ def upload_all_geotiffs():
                     )
                 rec['upload_code'] = r.status_code
                 if r.status_code not in (200,201):
-                    rec.update(status='error', message=r.text.strip())
+                    rec['status'] = 'error'
+                    rec['message'] = r.text.strip()
                     hasil.append(rec)
                     continue
 
                 # upload & assign style
                 sc1, sc2 = upload_style(layer_name, tif_path)
-                rec.update(status='success', style_codes=(sc1, sc2))
-
+                rec['status'] = 'success'
+                rec['style_codes'] = (sc1, sc2)
             except Exception as e:
-                rec.update(status='error', message=str(e))
+                rec['status'] = 'error'
+                rec['message'] = str(e)
 
             hasil.append(rec)
 

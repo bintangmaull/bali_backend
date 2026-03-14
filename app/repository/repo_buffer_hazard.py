@@ -1,31 +1,32 @@
 import logging
+from typing import Dict, Any, List, cast
 from sqlalchemy import text
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
 
 # konfigurasi tiap jenis hazard
-TYPE_CFG = {
+TYPE_CFG: Dict[str, Any] = {
     "gempa": {
-      "table":"model_intensitas_gempa",
-      "buffer_deg":0.0855,
-      "fields":["mmi_500","mmi_250","mmi_100"]
+      "table":      "model_intensitas_gempa",
+      "buffer_deg": 0.0047,    # threshold 525m ~ 0.0047 deg
+      "fields":     ["pga_100", "pga_200", "pga_250", "pga_500", "pga_1000"]
     },
-    "banjir": {
-      "table":"model_intensitas_banjir",
-      "buffer_deg":0.0063,
-      "fields":["depth_100","depth_50","depth_25"]
+    "tsunami": {
+      "table":      "model_intensitas_tsunami",
+      "buffer_deg": 0.00099,   # threshold 110m ~ 0.00099 deg
+      "fields":     ["inundansi"]
     },
-    "longsor": {
-      "table":"model_intensitas_longsor",
-      "buffer_deg":0.0063,
-      "fields":["mflux_5","mflux_2"]
+    "banjir_r": {
+      "table":      "model_intensitas_banjir",
+      "buffer_deg": 0.000153,  # threshold 17m ~ 0.000153 deg
+      "fields":     ["r_25", "r_50", "r_100", "r_250"]
     },
-    "gunungberapi": {
-      "table":"model_intensitas_gunungberapi",
-      "buffer_deg":0.00495,
-      "fields":["kpa_250","kpa_100","kpa_50"]
-    }
+    "banjir_rc": {
+      "table":      "model_intensitas_banjir",
+      "buffer_deg": 0.000153,
+      "fields":     ["rc_25", "rc_50", "rc_100", "rc_250"]
+    },
 }
 
 def get_buffered_features(dtype: str, field: str, bbox: dict, simplify_tolerance: float):
@@ -38,7 +39,8 @@ def get_buffered_features(dtype: str, field: str, bbox: dict, simplify_tolerance
         logger.error(f"Unknown type {dtype}")
         return []
 
-    if field not in cfg["fields"]:
+    valid_fields: List[str] = cast(List[str], cfg.get("fields", []))
+    if field not in valid_fields:
         logger.error(f"Field '{field}' is not valid for type '{dtype}'")
         return []
 
@@ -90,7 +92,8 @@ def get_nearest_point(dtype: str, field: str, lat: float, lng: float):
         logger.error(f"Unknown type {dtype}")
         return None
 
-    if field not in cfg["fields"]:
+    valid_fields: List[str] = cast(List[str], cfg.get("fields", []))
+    if field not in valid_fields:
         logger.error(f"Field '{field}' is not valid for type '{dtype}'")
         return None
 
@@ -111,10 +114,9 @@ def get_nearest_point(dtype: str, field: str, lat: float, lng: float):
     try:
         row = db.session.execute(sql, {"lat": lat, "lng": lng}).fetchone()
         if row:
-            mapping = getattr(row, "_mapping", row)
             return {
-                field: mapping["value"],
-                "distance_m": mapping["distance_m"]
+                field: float(row[0] or 0),
+                "distance_m": float(row[1] or 0)
             }
     except Exception as e:
         logger.error(f"Error nearest {dtype}: {e}")

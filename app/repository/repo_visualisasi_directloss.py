@@ -107,7 +107,7 @@ class GedungRepository:
         params = {}
 
         if kota:
-            where_clauses.append("TRIM(LOWER(hak.kota)) = TRIM(LOWER(:kota))")
+            where_clauses.append("TRIM(LOWER(hak.id_kota)) = TRIM(LOWER(:kota))")
             params["kota"] = kota
 
         sql = f"""
@@ -123,7 +123,7 @@ class GedungRepository:
           ) AS f
           FROM hasil_aal_kota hak
           JOIN kota k
-            ON lower(k.kota) = lower(hak.kota)
+            ON lower(k.kota) = lower(hak.id_kota)
           WHERE {" AND ".join(where_clauses)}
         ) sub;
         """
@@ -133,10 +133,10 @@ class GedungRepository:
     @staticmethod
     def fetch_aal_provinsi_list():
         sql = """
-        SELECT DISTINCT kota
+        SELECT DISTINCT id_kota
         FROM hasil_aal_kota
-        WHERE kota IS NOT NULL AND kota <> ''
-        ORDER BY kota
+        WHERE id_kota IS NOT NULL AND id_kota <> ''
+        ORDER BY id_kota
         """
         logger.debug("fetch_aal_provinsi_list SQL:\n%s", sql)
         rows = db.session.execute(text(sql)).fetchall()
@@ -147,7 +147,7 @@ class GedungRepository:
         sql = """
         SELECT *
         FROM hasil_aal_kota
-        WHERE TRIM(LOWER(kota)) = TRIM(LOWER(:kota))
+        WHERE TRIM(LOWER(id_kota)) = TRIM(LOWER(:kota))
         """
         logger.debug("fetch_aal_data SQL for kota=%s", kota)
         row = db.session.execute(text(sql), {"kota": kota}).mappings().first()
@@ -177,7 +177,7 @@ class GedungRepository:
         COPY (
           SELECT *
           FROM hasil_aal_kota
-          ORDER BY provinsi
+          ORDER BY id_kota
         ) TO STDOUT WITH CSV HEADER
         """
         raw_conn = db.session.connection().connection
@@ -200,7 +200,7 @@ class GedungRepository:
           ) AS f
           FROM hasil_aal_kota hak
           JOIN kota k
-            ON lower(k.kota) = lower(hak.kota)
+            ON lower(k.kota) = lower(hak.id_kota)
         ) sub;
         """
         logger.debug("fetch_aal_kota_geojson SQL:\n%s", sql)
@@ -212,7 +212,7 @@ class GedungRepository:
         COPY (
           SELECT *
           FROM hasil_aal_kota
-          ORDER BY provinsi, kota
+          ORDER BY id_kota
         ) TO STDOUT WITH CSV HEADER
         """
         raw_conn = db.session.connection().connection

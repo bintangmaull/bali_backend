@@ -534,7 +534,8 @@ function renderCharts(props) {
           <tr>
             <th class="p-2 text-left">Kota</th>
             <th class="p-2 text-left">Provinsi</th>
-            <th class="p-2 text-left">Nilai HSBGN</th>
+            <th class="p-2 text-left">HSBGN Sederhana</th>
+            <th class="p-2 text-left">HSBGN Tidak Sederhana</th>
             <th class="p-2 text-left">Aksi</th>
           </tr>
         </thead>
@@ -638,12 +639,14 @@ function renderTableHSBGN() {
     (!searchVal || item.kota.toLowerCase().includes(searchVal))
   );
   tableBodyHSBGN.innerHTML = filtered.map(r => {
-    const formatted = 'Rp ' + Number(r.hsbgn).toLocaleString('id-ID');
+    const fmtSederhana = 'Rp ' + Number(r.hsbgn_sederhana).toLocaleString('id-ID');
+    const fmtTidakSederhana = 'Rp ' + Number(r.hsbgn_tidaksederhana).toLocaleString('id-ID');
     return `
     <tr>
       <td class="p-2">${r.kota}</td>
       <td class="p-2">${r.provinsi}</td>
-      <td class="p-2">${formatted}</td>
+      <td class="p-2">${fmtSederhana}</td>
+      <td class="p-2">${fmtTidakSederhana}</td>
       <td class="p-2">
         <button onclick="editHSBGN('${r.id_kota}')" class="text-blue-600 hover:underline">✏️ Edit</button>
       </td>
@@ -661,7 +664,8 @@ function editHSBGN(id) {
   document.getElementById('editIdHSBGN').value       = data.id_kota;
   document.getElementById('editKotaHSBGN').value     = data.kota;
   document.getElementById('editProvinsiHSBGN').value = data.provinsi;
-  document.getElementById('editNilaiHSBGN').value    = data.hsbgn;
+  document.getElementById('editHSBGNSederhana').value = data.hsbgn_sederhana;
+  document.getElementById('editHSBGNTidakSederhana').value = data.hsbgn_tidaksederhana;
 
   // tampilkan modal
   editBackdropHSBGN.classList.remove('hidden');
@@ -903,8 +907,13 @@ recalcBtnBangunan.onclick = () => {
       </div>
 
       <div>
-        <label class="text-sm font-semibold">Nilai HSBGN (Rp)</label>
-        <input type="number" id="editNilaiHSBGN" class="border p-2 w-full rounded-lg" required>
+        <label class="text-sm font-semibold">HSBGN Sederhana (Rp)</label>
+        <input type="number" id="editHSBGNSederhana" class="border p-2 w-full rounded-lg" required>
+      </div>
+
+      <div>
+        <label class="text-sm font-semibold">HSBGN Tidak Sederhana (Rp)</label>
+        <input type="number" id="editHSBGNTidakSederhana" class="border p-2 w-full rounded-lg" required>
       </div>
 
       <div class="flex justify-end gap-4 mt-4">
@@ -928,12 +937,16 @@ recalcBtnBangunan.onclick = () => {
   editFormHSBGN.onsubmit = async (e) => {
     e.preventDefault();
     const id    = document.getElementById('editIdHSBGN').value;
-    const nilai = parseFloat(document.getElementById('editNilaiHSBGN').value);
+    const sederhana = parseFloat(document.getElementById('editHSBGNSederhana').value);
+    const tidakSederhana = parseFloat(document.getElementById('editHSBGNTidakSederhana').value);
 
     const res = await fetch(`${apiBaseHSBGN}/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hsbgn: nilai })
+      body: JSON.stringify({ 
+        hsbgn_sederhana: sederhana,
+        hsbgn_tidaksederhana: tidakSederhana 
+      })
     });
     if (!res.ok) {
       alert('Gagal simpan HSBGN');

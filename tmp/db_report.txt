@@ -1,0 +1,72 @@
+
+--- TABLE_SIZES ---
+                            Table Total_Size  Table_Size Index_Size  Approx_Rows
+0       model_intensitas_banjir_r     198 MB       66 MB     132 MB       755242
+1      model_intensitas_banjir_rc     198 MB       66 MB     132 MB       803257
+2             dmg_ratio_banjir_rc     109 MB       79 MB      30 MB       770634
+3              dmg_ratio_banjir_r     108 MB       79 MB      30 MB       814650
+4                 spatial_ref_sys    7144 kB     6896 kB     248 kB         8500
+5        model_intensitas_tsunami    4360 kB     1496 kB    2864 kB        16424
+6                   bangunan_copy    3376 kB     1064 kB    2312 kB         7325
+7         hasil_proses_directloss    2488 kB     1112 kB    1376 kB         7325
+8         model_intensitas_banjir    2240 kB      616 kB    1624 kB         5749
+9          model_intensitas_gempa    2080 kB      688 kB    1392 kB         5590
+10       model_intensitas_longsor    1880 kB      488 kB    1392 kB         5749
+11              dmg_ratio_tsunami    1720 kB     1680 kB      40 kB        16424
+12   hasil_proses_directloss_lama    1616 kB      976 kB     640 kB         6397
+13           dmgratio_banjir_copy     800 kB      480 kB     320 kB         5749
+14               dmgratio_longsor     744 kB      568 kB     176 kB         5749
+15                dmg_ratio_gempa     728 kB      688 kB      40 kB         5590
+16  model_intensitas_gunungberapi     456 kB      120 kB     336 kB         1109
+17          dmgratio_gunungberapi     232 kB      152 kB      80 kB         1109
+18                           kota     112 kB       40 kB      72 kB            9
+19    model_intensitas_gempa_lama      64 kB  8192 bytes      56 kB           63
+20                 hasil_aal_kota      64 kB  8192 bytes      56 kB           10
+21            dmgratio_gempa_lama      56 kB       16 kB      40 kB           63
+22            hasil_aal_kota_lama      56 kB  8192 bytes      48 kB           10
+23                batas_kota_bali      40 kB  8192 bytes      32 kB           -1
+24     referensi_dmgratio_tsunami      40 kB  8192 bytes      32 kB            0
+25                       provinsi      40 kB  8192 bytes      32 kB            1
+26                alembic_version      24 kB  8192 bytes      16 kB            1
+27     referensi_dmgratio_longsor      24 kB  8192 bytes      16 kB          125
+28       referensi_dmgratio_gempa      24 kB  8192 bytes      16 kB          144
+29      referensi_dmgratio_banjir      24 kB  8192 bytes      16 kB           68
+30                rekap_aset_kota      24 kB  8192 bytes      16 kB            9
+31                dmgratio_banjir      16 kB     0 bytes      16 kB           -1
+
+--- COLUMN_TYPES ---
+                    table_name       column_name          data_type
+0           dmg_ratio_banjir_r         id_lokasi  character varying
+1           dmg_ratio_banjir_r    dmgratio_1_r25   double precision
+2           dmg_ratio_banjir_r    dmgratio_2_r25   double precision
+3           dmg_ratio_banjir_r    dmgratio_1_r50   double precision
+4           dmg_ratio_banjir_r    dmgratio_2_r50   double precision
+5           dmg_ratio_banjir_r   dmgratio_1_r100   double precision
+6           dmg_ratio_banjir_r   dmgratio_2_r100   double precision
+7           dmg_ratio_banjir_r   dmgratio_1_r250   double precision
+8           dmg_ratio_banjir_r   dmgratio_2_r250   double precision
+9          dmg_ratio_banjir_rc         id_lokasi  character varying
+10         dmg_ratio_banjir_rc   dmgratio_1_rc25   double precision
+11         dmg_ratio_banjir_rc   dmgratio_2_rc25   double precision
+12         dmg_ratio_banjir_rc   dmgratio_1_rc50   double precision
+13         dmg_ratio_banjir_rc   dmgratio_2_rc50   double precision
+14         dmg_ratio_banjir_rc  dmgratio_1_rc100   double precision
+15         dmg_ratio_banjir_rc  dmgratio_2_rc100   double precision
+16         dmg_ratio_banjir_rc  dmgratio_1_rc250   double precision
+17         dmg_ratio_banjir_rc  dmgratio_2_rc250   double precision
+18   model_intensitas_banjir_r         id_lokasi  character varying
+19   model_intensitas_banjir_r               lon   double precision
+20   model_intensitas_banjir_r               lat   double precision
+21   model_intensitas_banjir_r              r_25   double precision
+22   model_intensitas_banjir_r              r_50   double precision
+23   model_intensitas_banjir_r             r_100   double precision
+24   model_intensitas_banjir_r             r_250   double precision
+25   model_intensitas_banjir_r              geom       USER-DEFINED
+26  model_intensitas_banjir_rc         id_lokasi  character varying
+27  model_intensitas_banjir_rc               lon   double precision
+28  model_intensitas_banjir_rc               lat   double precision
+29  model_intensitas_banjir_rc             rc_25   double precision
+30  model_intensitas_banjir_rc             rc_50   double precision
+31  model_intensitas_banjir_rc            rc_100   double precision
+32  model_intensitas_banjir_rc            rc_250   double precision
+33  model_intensitas_banjir_rc              geom       USER-DEFINED

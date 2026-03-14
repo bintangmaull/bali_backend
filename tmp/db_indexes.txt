@@ -1,0 +1,6 @@
+                    tablename                            indexname Index_Pretty_Size  Raw_Size                                                                                                                indexdef
+0   model_intensitas_banjir_r   idx_model_intensitas_banjir_r_geog             64 MB  66969600    CREATE INDEX idx_model_intensitas_banjir_r_geog ON public.model_intensitas_banjir_r USING gist (((geom)::geography))
+1   model_intensitas_banjir_r   idx_model_intensitas_banjir_r_geom             38 MB  40140800                   CREATE INDEX idx_model_intensitas_banjir_r_geom ON public.model_intensitas_banjir_r USING gist (geom)
+2   model_intensitas_banjir_r               idx_banjir_r_id_lokasi             30 MB  31727616                         CREATE INDEX idx_banjir_r_id_lokasi ON public.model_intensitas_banjir_r USING btree (id_lokasi)
+3  model_intensitas_banjir_rc  idx_model_intensitas_banjir_rc_geog             71 MB  74686464  CREATE INDEX idx_model_intensitas_banjir_rc_geog ON public.model_intensitas_banjir_rc USING gist (((geom)::geography))
+4  model_intensitas_banjir_rc              idx_banjir_rc_id_lokasi             17 MB  18317312                       CREATE INDEX idx_banjir_rc_id_lokasi ON public.model_intensitas_banjir_rc USING btree (id_lokasi)

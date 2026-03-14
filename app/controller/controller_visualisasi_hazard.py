@@ -5,7 +5,7 @@ bencana_bp = Blueprint('bencana_bp', __name__)
 
 @bencana_bp.route('/generate-raster/<bencana>/<kolom>', methods=['GET'])
 def generate_raster(bencana, kolom):
-    allowed_bencana = ['gempa', 'banjir', 'longsor', 'gunungberapi']
+    allowed_bencana = ['gempa', 'tsunami', 'banjir_r', 'banjir_rc']
     if bencana not in allowed_bencana:
         return jsonify({'status': 'error', 'message': 'Jenis bencana tidak valid'}), 400
 
@@ -19,10 +19,10 @@ def generate_raster(bencana, kolom):
 @bencana_bp.route('/generate-all-raster', methods=['GET'])
 def generate_all_raster():
     bencana_map = {
-        'gempa': ['mmi_100', 'mmi_250', 'mmi_500'],
-        'banjir': ['depth_100', 'depth_50', 'depth_25'],
-        'longsor': ['mflux_5', 'mflux_2'],
-        'gunungberapi': ['kpa_50', 'kpa_100', 'kpa_250']
+        'gempa':    ['pga_100', 'pga_200', 'pga_250', 'pga_500', 'pga_1000'],
+        'tsunami':  ['inundansi'],
+        'banjir_r': ['r_25', 'r_50', 'r_100', 'r_250'],
+        'banjir_rc':['rc_25', 'rc_50', 'rc_100', 'rc_250'],
     }
 
     hasil = []
@@ -39,19 +39,21 @@ def generate_all_raster():
                         'message': error
                     })
                 else:
-                    hasil.append({
-                        'bencana': bencana,
-                        'kolom': kolom,
+                    success_item = {
+                        'bencana': str(bencana),
+                        'kolom': str(kolom),
                         'status': 'success',
-                        'raster_file': path
-                    })
+                        'raster_file': str(path)
+                    }
+                    hasil.append(success_item)
             except Exception as e:
-                hasil.append({
-                    'bencana': bencana,
-                    'kolom': kolom,
+                error_item = {
+                    'bencana': str(bencana),
+                    'kolom': str(kolom),
                     'status': 'error',
                     'message': str(e)
-                })
+                }
+                hasil.append(error_item)
 
     return jsonify(hasil)
 

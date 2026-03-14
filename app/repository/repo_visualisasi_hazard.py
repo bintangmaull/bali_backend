@@ -1,4 +1,4 @@
-from app.models.models_database import RawGempa, RawBanjir, RawLongsor, RawGunungBerapi
+from app.models.models_database import RawGempa, RawTsunami, RawBanjirR, RawBanjirRC
 from app import db
 from geoalchemy2.shape import to_shape
 
@@ -6,10 +6,10 @@ class IntensitasRepo:
     @staticmethod
     def get_points_by_bencana(bencana, kolom):
         model_map = {
-            'gempa': RawGempa,
-            'banjir': RawBanjir,
-            'longsor': RawLongsor,
-            'gunungberapi': RawGunungBerapi
+            'gempa':    RawGempa,
+            'tsunami':  RawTsunami,
+            'banjir_r': RawBanjirR,
+            'banjir_rc':RawBanjirRC,
         }
 
         model = model_map.get(bencana)

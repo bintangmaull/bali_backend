@@ -77,7 +77,7 @@ class BangunanController:
     @staticmethod
     def new_id():
         taxonomy = request.args.get('taxonomy')
-        if taxonomy not in ("BMN", "FS", "FD"):
+        if taxonomy not in ("FS", "FD", "ELECTRICITY", "HOTEL", "AIRPORT"):
             return jsonify({"error": "taxonomy invalid"}), 400
         try:
             new_id = BangunanService.generate_unique_id(taxonomy)

@@ -1,0 +1,67 @@
+
+--- EXECUTING COMMAND 1 ---
+
+DROP INDEX IF EXISTS idx_model_intensitas_banjir_r_geom CASCADE
+✅ SUCCESS
+
+--- EXECUTING COMMAND 2 ---
+DROP INDEX IF EXISTS idx_model_intensitas_banjir_rc_geom CASCADE
+✅ SUCCESS
+
+--- EXECUTING COMMAND 3 ---
+
+ALTER TABLE model_intensitas_banjir_r 
+  ALTER COLUMN r_25 TYPE real,
+  ALTER COLUMN r_50 TYPE real,
+  ALTER COLUMN r_100 TYPE real,
+  ALTER COLUMN r_250 TYPE real
+✅ SUCCESS
+
+--- EXECUTING COMMAND 4 ---
+ALTER TABLE model_intensitas_banjir_rc 
+  ALTER COLUMN rc_25 TYPE real,
+  ALTER COLUMN rc_50 TYPE real,
+  ALTER COLUMN rc_100 TYPE real,
+  ALTER COLUMN rc_250 TYPE real
+✅ SUCCESS
+
+--- EXECUTING COMMAND 5 ---
+
+ALTER TABLE dmg_ratio_banjir_r 
+  ALTER COLUMN dmgratio_1_r25 TYPE real, ALTER COLUMN dmgratio_2_r25 TYPE real,
+  ALTER COLUMN dmgratio_1_r50 TYPE real, ALTER COLUMN dmgratio_2_r50 TYPE real,
+  ALTER COLUMN dmgratio_1_r100 TYPE real, ALTER COLUMN dmgratio_2_r100 TYPE real,
+  ALTER COLUMN dmgratio_1_r250 TYPE real, ALTER COLUMN dmgratio_2_r250 TYPE real
+✅ SUCCESS
+
+--- EXECUTING COMMAND 6 ---
+ALTER TABLE dmg_ratio_banjir_rc 
+  ALTER COLUMN dmgratio_1_rc25 TYPE real, ALTER COLUMN dmgratio_2_rc25 TYPE real,
+  ALTER COLUMN dmgratio_1_rc50 TYPE real, ALTER COLUMN dmgratio_2_rc50 TYPE real,
+  ALTER COLUMN dmgratio_1_rc100 TYPE real, ALTER COLUMN dmgratio_2_rc100 TYPE real,
+  ALTER COLUMN dmgratio_1_rc250 TYPE real, ALTER COLUMN dmgratio_2_rc250 TYPE real
+✅ SUCCESS
+
+--- EXECUTING COMMAND 7 ---
+VACUUM FULL model_intensitas_banjir_r
+✅ SUCCESS
+
+--- EXECUTING COMMAND 8 ---
+VACUUM FULL model_intensitas_banjir_rc
+✅ SUCCESS
+
+--- EXECUTING COMMAND 9 ---
+VACUUM FULL dmg_ratio_banjir_r
+✅ SUCCESS
+
+--- EXECUTING COMMAND 10 ---
+VACUUM FULL dmg_ratio_banjir_rc
+✅ SUCCESS
+
+--- EXECUTING COMMAND 11 ---
+REINDEX TABLE model_intensitas_banjir_r
+✅ SUCCESS
+
+--- EXECUTING COMMAND 12 ---
+REINDEX TABLE model_intensitas_banjir_rc
+✅ SUCCESS

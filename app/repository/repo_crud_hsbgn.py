@@ -48,3 +48,16 @@ class HSBGNRepository:
             db.session.commit()
             return True
         return False
+
+    @staticmethod
+    def get_kota_by_provinsi(provinsi):
+        """Ambil daftar kota berdasarkan provinsi (case-insensitive)"""
+        from sqlalchemy import func
+        rows = db.session.query(HSBGN.kota).filter(func.lower(HSBGN.provinsi) == provinsi.lower()).distinct().all()
+        return sorted([r[0] for r in rows if r[0]])
+
+    @staticmethod
+    def get_all_kotas():
+        """Ambil semua kota unik dari master table"""
+        rows = db.session.query(HSBGN.kota).distinct().all()
+        return sorted([r[0] for r in rows if r[0]])

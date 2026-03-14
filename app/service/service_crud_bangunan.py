@@ -13,11 +13,12 @@ from app.models.models_database import HasilProsesDirectLoss, HasilAALProvinsi
 from app.repository.repo_directloss import get_bangunan_data
 from app.service.service_directloss import recalc_building_directloss_and_aal  # << import baru
 
+# Probabilitas per bencana sesuai return period (dipakai di delete_bangunan)
 PROB_CONFIG = {
-    'gempa': {'500': 1/500, '250': 1/250, '100': 1/100},
-    'banjir': {'100': 1/100, '50': 1/50, '25': 1/25},
-    'longsor': {'5': 1/5, '2': 1/2},
-    'gunungberapi': {'250': 1/250, '100': 1/100, '50': 1/50}
+    'gempa':     {'100': 1/100,  '200': 1/200, '250': 1/250, '500': 1/500,  '1000': 1/1000},
+    'tsunami':   {'inundansi': 1/2500},
+    'banjir_r':  {'25': 1/25,   '50': 1/50,  '100': 1/100, '250': 1/250},
+    'banjir_rc': {'25': 1/25,   '50': 1/50,  '100': 1/100, '250': 1/250},
 }
 
 logger = logging.getLogger(__name__)
@@ -66,24 +67,32 @@ class BangunanService:
         old_losses = {c.name: getattr(old_record, c.name, 0) for c in old_record.__table__.columns if c.name.startswith('direct_loss_')}
 
         # 2. Ambil baris AAL kota yang akan diupdate
-        aal_row = db.session.query(HasilAALProvinsi).filter_by(kota=kota_val).one_or_none()
+        aal_row = db.session.query(HasilAALProvinsi).filter_by(id_kota=kota_val).one_or_none()
         if not aal_row:
             raise RuntimeError(f"AAL untuk kota '{kota_val}' tidak ditemukan saat mencoba menghapus bangunan.")
 
         # 3. Hitung AAL yang disumbangkan oleh bangunan ini (ini adalah delta-nya)
+        DISASTER_PREFIX = {'gempa': 'pga', 'tsunami': 'inundansi', 'banjir_r': 'r', 'banjir_rc': 'rc'}
+
         for disaster, prob_config in PROB_CONFIG.items():
+            dis_pre = DISASTER_PREFIX.get(disaster, disaster)
             sorted_probs_data = sorted(prob_config.items(), key=lambda item: item[1])
             probabilities = [0] + [prob for _, prob in sorted_probs_data]
 
-            # Ambil kerugian dari bangunan yang dihapus
-            losses_to_remove = [0] + [old_losses.get(f'direct_loss_{disaster}_{rp}', 0) for rp, _ in sorted_probs_data]
-            
-            # Hitung AAL yang akan dihilangkan (delta)
+            # Nama kolom direct_loss sesuai format tabel
+            def _col(dis, rp):
+                if dis == 'gempa':    return f'direct_loss_pga_{rp}'
+                if dis == 'tsunami':  return f'direct_loss_inundansi'
+                if dis == 'banjir_r': return f'direct_loss_r_{rp}'
+                if dis == 'banjir_rc':return f'direct_loss_rc_{rp}'
+                return f'direct_loss_{dis}_{rp}'
+
+            losses_to_remove = [0] + [old_losses.get(_col(disaster, rp), 0) for rp, _ in sorted_probs_data]
+
             delta_aal = np.trapz(y=losses_to_remove, x=probabilities)
 
-            # Kurangi nilai AAL dari total kota
-            col_bgn = f"aal_{disaster}_{kode_bgn.lower()}"
-            col_tot = f"aal_{disaster}_total"
+            col_bgn = f"aal_{dis_pre}_{kode_bgn.lower()}"
+            col_tot = f"aal_{dis_pre}_total"
 
             current_bgn_aal = getattr(aal_row, col_bgn, 0) or 0
             current_tot_aal = getattr(aal_row, col_tot, 0) or 0
@@ -114,14 +123,17 @@ class BangunanService:
 
     @staticmethod
     def generate_unique_id(taxonomy: str) -> str:
-        if taxonomy not in ("BMN", "FS", "FD"):
-            raise ValueError("kode_bangunan invalid, harus BMN/FS/FD")
+        VALID_CODES = ("FS", "FD", "ELECTRICITY", "HOTEL", "AIRPORT")
+        if taxonomy not in VALID_CODES:
+            raise ValueError(f"kode_bangunan invalid, harus salah satu dari: {', '.join(VALID_CODES)}")
         while True:
             ts = int(time.time())
             suffix = random.randint(100, 999)
             candidate = f"{taxonomy}_{ts}{suffix}"
             if not BangunanRepository.exists_id(candidate):
                 return candidate
+        # unreachable, but for linter
+        raise RuntimeError("Failed to generate unique identifier after multiple attempts")
 
     @staticmethod
     def get_provinsi_list():
@@ -137,8 +149,8 @@ class BangunanService:
         Baca CSV dengan kolom:
           nama_gedung, alamat, provinsi, kota,
           lon, lat,
-          kode_bangunan (BMN/FS/FD),
-          taxonomy (MUR/MCF/CR/Light Wood),
+          kode_bangunan (FS/FD/ELECTRICITY/HOTEL/AIRPORT),
+          taxonomy (CR/MCF),
           luas
         Generate id_bangunan per baris dari kode_bangunan,
         lalu insert tanpa geom (Postgres akan generate geom).
@@ -147,21 +159,22 @@ class BangunanService:
         reader = csv.DictReader(io.StringIO(text))
         created = 0
 
+        VALID_CODES = ("FS", "FD", "ELECTRICITY", "HOTEL", "AIRPORT")
         for row in reader:
             # trim all inputs
             nama     = row.get("nama_gedung","").strip()
             alamat   = row.get("alamat","").strip()
             prov     = row.get("provinsi","").strip()
             kota     = row.get("kota","").strip()
-            kode     = row.get("kode_bangunan","").strip()   # BMN/FS/FD
-            tax      = row.get("taxonomy","").strip()        # MUR/MCF/CR/Light Wood
+            kode     = row.get("kode_bangunan","").strip()   # FS/FD/ELECTRICITY/HOTEL/AIRPORT
+            tax      = row.get("taxonomy","").strip()        # CR/MCF
             lon      = float(row.get("lon") or 0)
             lat      = float(row.get("lat") or 0)
             luas     = float(row.get("luas") or 0)
             jumlah_lantai = int(row.get("jumlah_lantai") or 1) 
 
             # generate id from kode_bangunan, not taxonomy
-            if kode not in ("BMN","FS","FD"):
+            if kode.upper() not in VALID_CODES:
                 raise ValueError(f"Invalid kode_bangunan '{kode}' at line {reader.line_num}")
             data = {
                 "id_bangunan": BangunanService.generate_unique_id(kode),
