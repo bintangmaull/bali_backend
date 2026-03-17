@@ -292,6 +292,8 @@ class RekapAsetKota(db.Model):
     count_total = db.Column(db.Integer, default=0)
     total_asset_total = db.Column(db.Float, default=0)
 
+    dl_exposure = db.Column(db.JSON, nullable=True)
+
     # --- Direct Loss & Ratio per Return Period ---
     # Gempa
     dl_sum_pga_100 = db.Column(db.Float, default=0)

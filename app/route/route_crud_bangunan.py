@@ -50,3 +50,10 @@ bangunan_bp.add_url_rule(
     view_func=BangunanController.recalc,
     methods=["POST"]
 )
+
+# Recalc directloss & AAL untuk satu kota
+bangunan_bp.add_url_rule(
+    "/bangunan/kota/<string:kota_val>/recalc",
+    view_func=BangunanController.recalc_kota,
+    methods=["POST"]
+)

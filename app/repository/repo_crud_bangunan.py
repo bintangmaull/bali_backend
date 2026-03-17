@@ -28,10 +28,15 @@ class BangunanRepository:
         ).scalar()
 
     @staticmethod
-    def get_all(provinsi=None, kota=None, nama=None):
+    def get_all(provinsi=None, kota=None, nama=None, limit=None):
         """
         Ambil list bangunan (tanpa geom) dengan optional filter.
+        Jika tidak ada parameter pencarian sama sekali dan limit juga tidak ada, kembalikan list kosong
+        agar tabel tidak freeze menopang semua data.
         """
+        if not (provinsi or kota or nama or limit):
+            return []
+            
         q = db.session.query(*BangunanRepository._columns)
         if provinsi:
             q = q.filter(Bangunan.provinsi == provinsi)
@@ -39,7 +44,12 @@ class BangunanRepository:
             q = q.filter(Bangunan.kota == kota)
         if nama:
             q = q.filter(Bangunan.nama_gedung.ilike(f"%{nama}%"))
-        rows = q.order_by(Bangunan.nama_gedung).all()
+            
+        q = q.order_by(Bangunan.nama_gedung)
+        if limit is not None:
+            q = q.limit(limit)
+            
+        rows = q.all()
         return [dict(zip(BangunanRepository._fields, row)) for row in rows]
 
     @staticmethod

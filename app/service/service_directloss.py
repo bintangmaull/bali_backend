@@ -234,15 +234,9 @@ def _compute_all_dl(bld, disaster_data):
 def process_all_disasters():
     logger.debug("=== START process_all_disasters ===")
 
-    # Clear old
-    try:
-        db.session.query(HasilProsesDirectLoss).delete()
-        db.session.query(HasilAALProvinsi).delete()
-        db.session.commit()
-        logger.debug("✅ Cleared DirectLoss & AAL (per kota)")
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"❌ Clearing old failed: {e}")
+    # Deletions of HasilProsesDirectLoss and HasilAALProvinsi are moved 
+    # to their respective insertion blocks to ensure data is not empty 
+    # during the lengthy calculation process.
 
     # 1) Bangunan
     bld = get_bangunan_data()
@@ -267,14 +261,14 @@ def process_all_disasters():
 
     # 4) Save Direct Loss
     bld = bld.drop_duplicates(subset='id_bangunan', keep='last')
-    mappings = [
-        {"id_bangunan": row['id_bangunan'], **{c: row[c] for c in dl_cols}}
-        for _, row in bld.iterrows()
-    ]
+    cols_to_keep = ['id_bangunan'] + dl_cols
+    mappings = bld[cols_to_keep].to_dict('records')
     try:
+        # Hapus data lama dan insert data baru dalam satu transaksi
+        db.session.query(HasilProsesDirectLoss).delete()
         db.session.bulk_insert_mappings(HasilProsesDirectLoss, mappings)
         db.session.commit()
-        logger.info("✅ Direct Loss saved")
+        logger.info("✅ Direct Loss saved (replaced data in single transaction)")
     except Exception as e:
         db.session.rollback()
         logger.error(f"❌ Saving Direct Loss failed: {e}")
@@ -330,6 +324,8 @@ def _calculate_rekap_aset(bld: pd.DataFrame):
         res['total_asset_total'] = total_value
         
         # B) Hitung Direct Loss Sum & Ratio (Terhadap Total Aset Kota)
+        dl_exposure_dict = {}
+
         for name, cfg in DISASTER_MAPPING.items():
             pre = cfg['prefix']
             scales = cfg['scales']
@@ -337,18 +333,32 @@ def _calculate_rekap_aset(bld: pd.DataFrame):
                 rp_suffix = f"{pre}_{s}" if pre else s
                 dl_col = f"direct_loss_{rp_suffix}"
                 
+                # Total for the whole city
                 sum_val = float(group[dl_col].sum()) if dl_col in group.columns else 0.0
                 ratio = ((sum_val / total_value) * 100.0) if total_value > 0 else 0.0
                 
                 res[f'dl_sum_{rp_suffix}'] = sum_val
                 res[f'ratio_{rp_suffix}'] = ratio
                 
+                # Breakdown by Exposure
+                for btype in supported_types:
+                    if btype not in dl_exposure_dict:
+                        dl_exposure_dict[btype] = {}
+                    
+                    sub = group[group['kode_bangunan'].str.lower() == btype]
+                    sum_val_exp = float(sub[dl_col].sum()) if dl_col in sub.columns else 0.0
+                    dl_exposure_dict[btype][rp_suffix] = sum_val_exp
+
+        import json
+        res['dl_exposure'] = dl_exposure_dict
+                
         results.append(res)
         
     # 3. Simpan ke Database
     try:
-        db.session.query(RekapAsetKota).delete()
         if results:
+            city_ids = [r['id_kota'] for r in results]
+            db.session.query(RekapAsetKota).filter(RekapAsetKota.id_kota.in_(city_ids)).delete(synchronize_session=False)
             db.session.bulk_insert_mappings(RekapAsetKota, results)
         db.session.commit()
         logger.info(f"✅ Rekap Aset Kota saved ({len(results)} cities)")
@@ -442,8 +452,9 @@ def calculate_aal():
 
     # Simpan ke Database
     try:
+        # Hapus data lama dan insert data baru dalam satu transaksi untuk menghindari data kosong
         db.session.query(HasilAALProvinsi).delete()
-        db.session.commit()
+        
         # Filter hanya kolom / atribut yang ada di model
         valid_keys = {c.key for c in HasilAALProvinsi.__table__.columns}
         records = []
@@ -451,7 +462,7 @@ def calculate_aal():
             records.append({k: v for k, v in rec.items() if k in valid_keys})
         db.session.bulk_insert_mappings(HasilAALProvinsi, records)
         db.session.commit()
-        logger.info("✅ AAL saved to database")
+        logger.info("✅ AAL saved to database (replaced data in single transaction)")
     except Exception as e:
         db.session.rollback()
         logger.error(f"❌ Saving AAL failed: {e}")
@@ -590,11 +601,11 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
 
     if old_record:
         db.session.delete(old_record)
-        db.session.commit()
+        
     new_rec = HasilProsesDirectLoss(id_bangunan=bangunan_id, **direct_losses)
     db.session.add(new_rec)
     db.session.commit()
-    logger.debug(f"✅ DirectLoss (recalc) saved for {bangunan_id}")
+    logger.debug(f"✅ DirectLoss (recalc) saved for {bangunan_id} in single transaction")
 
     # 4. Delta AAL per bencana
     aal_row = db.session.query(HasilAALProvinsi).filter_by(id_kota=kota_val).one_or_none()
@@ -668,10 +679,8 @@ def recalc_city_directloss_and_aal(kota_name: str):
         db.session.query(HasilProsesDirectLoss).filter(
             HasilProsesDirectLoss.id_bangunan.in_(bld_ids)
         ).delete(synchronize_session=False)
-        mappings = [
-            {"id_bangunan": row['id_bangunan'], **{c: row[c] for c in dl_cols}}
-            for _, row in bld.iterrows()
-        ]
+        cols_to_keep = ['id_bangunan'] + dl_cols
+        mappings = bld[cols_to_keep].to_dict('records')
         db.session.bulk_insert_mappings(HasilProsesDirectLoss, mappings)
         db.session.commit()
         logger.info(f"✅ City Direct Loss saved for {kota_name}")

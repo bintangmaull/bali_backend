@@ -8,8 +8,8 @@ from app.repository.repo_kurva_banjir import get_reference_curves_banjir
 
 logger = logging.getLogger(__name__)
 
-R_SCALES = ['25', '50', '100', '250']
-RC_SCALES = ['25', '50', '100', '250']
+R_SCALES = ['2', '5', '10', '25', '50', '100', '250']
+RC_SCALES = ['2', '5', '10', '25', '50', '100', '250']
 
 def process_data_combined(input_data: pd.DataFrame) -> pd.DataFrame:
     """

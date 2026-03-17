@@ -2,8 +2,8 @@ from app.repository.repo_visualisasi_directloss import GedungRepository
 
 class GedungService:
     @staticmethod
-    def get_geojson(bbox=None, prov=None, kota=None):
-        return GedungRepository.fetch_geojson(bbox=bbox, prov=prov, kota=kota)
+    def get_geojson(bbox=None, prov=None, kota=None, limit=None):
+        return GedungRepository.fetch_geojson(bbox=bbox, prov=prov, kota=kota, limit=limit)
 
     @staticmethod
     def get_provinsi_list():
@@ -44,4 +44,8 @@ class GedungService:
     @staticmethod
     def get_aal_kota_csv():
         return GedungRepository.stream_aal_kota_csv()
+
+    @staticmethod
+    def get_rekap_aset_kota_geojson():
+        return GedungRepository.fetch_rekap_aset_kota_geojson()
 

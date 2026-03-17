@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 
 class BangunanService:
     @staticmethod
-    def get_all_bangunan(provinsi=None, kota=None, nama=None):
-        return BangunanRepository.get_all(provinsi, kota, nama)
+    def get_all_bangunan(provinsi=None, kota=None, nama=None, limit=None):
+        return BangunanRepository.get_all(provinsi, kota, nama, limit)
 
     @staticmethod
     def get_bangunan_by_id(bangunan_id):
@@ -158,6 +158,7 @@ class BangunanService:
         text = file_storage.stream.read().decode("utf-8")
         reader = csv.DictReader(io.StringIO(text))
         created = 0
+        affected_cities = set()
 
         VALID_CODES = ("FS", "FD", "ELECTRICITY", "HOTEL", "AIRPORT")
         for row in reader:
@@ -166,6 +167,8 @@ class BangunanService:
             alamat   = row.get("alamat","").strip()
             prov     = row.get("provinsi","").strip()
             kota     = row.get("kota","").strip()
+            if kota:
+                affected_cities.add(kota)
             kode     = row.get("kode_bangunan","").strip()   # FS/FD/ELECTRICITY/HOTEL/AIRPORT
             tax      = row.get("taxonomy","").strip()        # CR/MCF
             lon      = float(row.get("lon") or 0)
@@ -193,7 +196,7 @@ class BangunanService:
             BangunanRepository.create(data)
             created += 1
 
-        return {"created": created}
+        return {"created": created, "affected_cities": list(affected_cities)}
 
     # ====================================================================
     # Metode baru: recalc Direct Loss & AAL untuk satu bangunan spesifik

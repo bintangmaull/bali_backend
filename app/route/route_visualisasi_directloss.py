@@ -134,6 +134,11 @@ def get_aal_kota_geojson():
     geojson = GedungService.get_aal_kota_geojson()
     return jsonify(geojson)
 
+@gedung_bp.route('/rekap-aset-kota', methods=['GET'])
+def get_rekap_aset_kota_geojson():
+    geojson = GedungService.get_rekap_aset_kota_geojson()
+    return jsonify(geojson)
+
 @gedung_bp.route('/kota-boundary', methods=['GET'])
 def get_kota_boundary():
     """Return GeoJSON boundary untuk satu kota dari tabel kota."""

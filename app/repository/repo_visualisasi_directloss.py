@@ -25,7 +25,7 @@ logger.addHandler(ch)
 
 class GedungRepository:
     @staticmethod
-    def fetch_geojson(bbox=None, prov=None, kota=None):
+    def fetch_geojson(bbox=None, prov=None, kota=None, limit=None):
         where = ["1=1"]
         params = {}
 
@@ -41,6 +41,10 @@ class GedungRepository:
         if kota:
             where.append("TRIM(LOWER(b.kota)) = TRIM(LOWER(:kota))")
             params["kota"] = kota
+            
+        limit_clause = ""
+        if limit is not None:
+             limit_clause = f"LIMIT {limit}"
 
         # Ensure provinsi/kota never null in the JSON properties
         sql = f"""
@@ -61,13 +65,16 @@ class GedungRepository:
               )
               || jsonb_build_object(
                    'provinsi', COALESCE(b.provinsi, ''),
-                   'kota',    COALESCE(b.kota, '')
+                   'kota',    COALESCE(b.kota, ''),
+                   'hsbgn',   CASE WHEN b.jumlah_lantai = 1 THEN k.hsbgn_sederhana ELSE k.hsbgn_tidaksederhana END
                  )
               || to_jsonb(d)
           ) AS f
           FROM bangunan_copy b
           JOIN hasil_proses_directloss d USING(id_bangunan)
+          LEFT JOIN kota k ON TRIM(LOWER(k.kota)) = TRIM(LOWER(b.kota))
           WHERE {" AND ".join(where)}
+          {limit_clause}
         ) sub;
         """
         logger.debug("fetch_geojson SQL:\n%s", sql)
@@ -219,4 +226,25 @@ class GedungRepository:
         cur = raw_conn.cursor()
         logger.debug("stream_aal_kota_csv copy_sql prepared")
         return cur, copy_sql, {}
+
+    @staticmethod
+    def fetch_rekap_aset_kota_geojson():
+        sql = """
+        SELECT json_build_object(
+          'type',     'FeatureCollection',
+          'features', COALESCE(json_agg(f), '[]'::json)
+        ) AS geojson
+        FROM (
+          SELECT json_build_object(
+            'type',     'Feature',
+            'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.01))::json,
+            'properties', to_jsonb(rak)
+          ) AS f
+          FROM rekap_aset_kota rak
+          JOIN kota k
+            ON lower(k.kota) = lower(rak.id_kota)
+        ) sub;
+        """
+        logger.debug("fetch_rekap_aset_kota_geojson SQL:\n%s", sql)
+        return db.session.execute(text(sql)).scalar()
 

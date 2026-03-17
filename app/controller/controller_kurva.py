@@ -80,9 +80,10 @@ def process_kurva_tsunami():
 # ======================== BANJIR R ========================
 def process_kurva_banjir_r():
     try:
-        # Optimasi: Ambil hanya kolom numerik
+        # Optimasi: Ambil hanya kolom numerik (hindari geom agar tidak timeout)
         raw = db.session.query(
             RawBanjir.id_lokasi,
+            RawBanjir.r_2, RawBanjir.r_5, RawBanjir.r_10,
             RawBanjir.r_25, RawBanjir.r_50,
             RawBanjir.r_100, RawBanjir.r_250
         ).all()
@@ -90,8 +91,8 @@ def process_kurva_banjir_r():
         if not raw:
             return jsonify({"error": "No data found in model_intensitas_banjir table"}), 404
 
-        df = pd.DataFrame(raw, columns=['id_lokasi', 'r_25', 'r_50', 'r_100', 'r_250'])
-        # Kolom: id_lokasi, r_25, r_50, r_100, r_250
+        df = pd.DataFrame(raw, columns=['id_lokasi', 'r_2', 'r_5', 'r_10', 'r_25', 'r_50', 'r_100', 'r_250'])
+        # Kolom: id_lokasi, r_2, r_5, r_10, r_25, r_50, r_100, r_250
 
         output = process_banjir_r(df)
         output.to_csv("output_kurva_banjir_r.csv", index=False)
@@ -112,6 +113,7 @@ def process_kurva_banjir_rc():
         # Optimasi: Ambil hanya kolom numerik
         raw = db.session.query(
             RawBanjir.id_lokasi,
+            RawBanjir.rc_2, RawBanjir.rc_5, RawBanjir.rc_10,
             RawBanjir.rc_25, RawBanjir.rc_50,
             RawBanjir.rc_100, RawBanjir.rc_250
         ).all()
@@ -119,8 +121,8 @@ def process_kurva_banjir_rc():
         if not raw:
             return jsonify({"error": "No data found in model_intensitas_banjir table"}), 404
 
-        df = pd.DataFrame(raw, columns=['id_lokasi', 'rc_25', 'rc_50', 'rc_100', 'rc_250'])
-        # Kolom: id_lokasi, rc_25, rc_50, rc_100, rc_250
+        df = pd.DataFrame(raw, columns=['id_lokasi', 'rc_2', 'rc_5', 'rc_10', 'rc_25', 'rc_50', 'rc_100', 'rc_250'])
+        # Kolom: id_lokasi, rc_2, rc_5, rc_10, rc_25, rc_50, rc_100, rc_250
 
         output = process_banjir_rc(df)
         output.to_csv("output_kurva_banjir_rc.csv", index=False)
@@ -159,7 +161,9 @@ def process_kurva_banjir_all():
             # 3. Ambil data per chunk
             raw_chunk = db.session.query(
                 RawBanjir.id_lokasi,
+                RawBanjir.r_2, RawBanjir.r_5, RawBanjir.r_10,
                 RawBanjir.r_25, RawBanjir.r_50, RawBanjir.r_100, RawBanjir.r_250,
+                RawBanjir.rc_2, RawBanjir.rc_5, RawBanjir.rc_10,
                 RawBanjir.rc_25, RawBanjir.rc_50, RawBanjir.rc_100, RawBanjir.rc_250
             ).order_by(RawBanjir.id_lokasi).limit(CHUNK_SIZE).offset(offset).all()
 
@@ -168,8 +172,8 @@ def process_kurva_banjir_all():
 
             df_chunk = pd.DataFrame(raw_chunk, columns=[
                 'id_lokasi', 
-                'r_25', 'r_50', 'r_100', 'r_250',
-                'rc_25', 'rc_50', 'rc_100', 'rc_250'
+                'r_2', 'r_5', 'r_10', 'r_25', 'r_50', 'r_100', 'r_250',
+                'rc_2', 'rc_5', 'rc_10', 'rc_25', 'rc_50', 'rc_100', 'rc_250'
             ])
 
             # 4. Proses Interpolasi (Combined R & RC)

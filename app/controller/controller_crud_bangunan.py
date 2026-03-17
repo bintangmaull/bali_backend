@@ -12,7 +12,13 @@ class BangunanController:
             prov = request.args.get('provinsi')
             kota = request.args.get('kota')
             nama = request.args.get('nama')
-            data = BangunanService.get_all_bangunan(prov, kota, nama)
+            limit = request.args.get('limit')
+            if limit is not None:
+                try:
+                    limit = int(limit)
+                except ValueError:
+                    limit = None
+            data = BangunanService.get_all_bangunan(prov, kota, nama, limit)
             return jsonify(data), 200
         except Exception as e:
             logger.error(f"Error get_all: {e}")
@@ -149,3 +155,17 @@ class BangunanController:
         except Exception as e:
             logger.error(f"Error recalc bangunan: {e}")
             return jsonify({"error": "Terjadi kesalahan perhitungan ulang"}), 500
+
+    @staticmethod
+    def recalc_kota(kota_val):
+        """
+        POST /api/bangunan/kota/<kota_val>/recalc
+        Hitung ulang directloss & AAL untuk seluruh bangunan di sebuah kota.
+        """
+        try:
+            from app.service.service_directloss import recalc_city_directloss_and_aal
+            result = recalc_city_directloss_and_aal(kota_val)
+            return jsonify(result), 200
+        except Exception as e:
+            logger.error(f"Error recalc kota {kota_val}: {e}")
+            return jsonify({"error": "Terjadi kesalahan perhitungan ulang per kota"}), 500
