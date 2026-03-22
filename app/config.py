@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from urllib.parse import quote_plus
 
 class Config:
@@ -29,6 +30,11 @@ class Config:
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(BASE_DIR, 'uploads'))
 
     DEBUG = os.getenv('DEBUG', 'False').lower() in ['true', '1', 't']
+
+    # JWT Configuration
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'cardinal-aal-super-secret-key-2024')
+    # Token expires in 7 days — MUST be timedelta, not raw int
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)

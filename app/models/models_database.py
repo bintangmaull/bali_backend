@@ -375,3 +375,53 @@ class BanjirReferenceCurve(db.Model):
     tipe_kurva   = db.Column(db.String(10), nullable=False)   # '1' = 1 lantai, '2' = 2+ lantai
     x            = db.Column(db.Float, nullable=False)
     y            = db.Column(db.Float, nullable=False)
+
+
+# === Autentikasi: User & Activity Log ===
+
+class User(db.Model):
+    __tablename__ = 'users'
+
+    id           = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nama         = db.Column(db.String(255), nullable=False)
+    email        = db.Column(db.String(255), nullable=False, unique=True)
+    password_hash = db.Column(db.String(512), nullable=False)
+    # status: 'pending' | 'approved' | 'rejected'
+    status       = db.Column(db.String(20), nullable=False, default='pending')
+    created_at   = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nama': self.nama,
+            'email': self.email,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ActivityLog(db.Model):
+    __tablename__ = 'activity_log'
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_nama   = db.Column(db.String(255), nullable=False)
+    user_email  = db.Column(db.String(255), nullable=False)
+    # action: 'tambah' | 'edit' | 'hapus' | 'upload_csv'
+    action      = db.Column(db.String(50), nullable=False)
+    # target: 'bangunan' | 'hsbgn'
+    target      = db.Column(db.String(50), nullable=False)
+    target_id   = db.Column(db.String(255), nullable=True)
+    detail      = db.Column(db.Text, nullable=True)
+    timestamp   = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_nama': self.user_nama,
+            'user_email': self.user_email,
+            'action': self.action,
+            'target': self.target,
+            'target_id': self.target_id,
+            'detail': self.detail,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+        }

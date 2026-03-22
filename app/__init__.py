@@ -5,11 +5,16 @@ from sqlalchemy import text
 from app.config import Config
 from app.extensions import db, migrate
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 
 # CRUD & raw-data blueprints
 from app.route.route_raw import main_bp
 from app.route.route_crud_bangunan import bangunan_bp
 from app.route.route_crud_hsbgn import hsbgn_bp
+
+# Auth & Admin blueprints
+from app.route.route_auth import auth_bp
+from app.route.route_admin import admin_bp
 
 # Visualization (direct-loss) blueprint
 from app.route.route_visualisasi_directloss import setup_visualisasi_routes
@@ -54,12 +59,30 @@ def create_app():
     # init extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    jwt = JWTManager(app)
+
+    # Custom error handlers to expose JWT error details for debugging
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error_string):
+        logger.error(f"❌ Invalid JWT token: {error_string}")
+        return {'msg': f'Token tidak valid: {error_string}'}, 422
+
+    @jwt.unauthorized_loader
+    def missing_token_callback(error_string):
+        return {'msg': f'Token tidak ditemukan: {error_string}'}, 401
+
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return {'msg': 'Token sudah kadaluarsa. Silakan login ulang.'}, 401
+
 
     # register CRUD & raw-data blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(bangunan_bp)
     app.register_blueprint(hsbgn_bp)
     app.register_blueprint(disaster_curve_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
 
     # test
     app.register_blueprint(buffer_disaster_bp)
