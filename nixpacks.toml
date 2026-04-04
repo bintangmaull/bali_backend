@@ -1,9 +1,9 @@
 # nixpacks.toml for Flask + Rasterio/GDAL
 [phases.setup]
-    nixPkgs = ["python311", "gcc", "gdal", "expat", "proj", "geos"]
+    nixPkgs = ["python311", "python311Packages.pip", "gcc", "gdal", "expat", "proj", "geos", "pkg-config"]
 
 [phases.install]
-    cmds = ["pip install -r requirements.txt"]
+    cmds = ["python3 -m pip install -r requirements.txt"]
 
 [variables]
     GDAL_DATA = "/usr/share/gdal"
