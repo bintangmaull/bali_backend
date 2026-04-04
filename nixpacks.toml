@@ -5,6 +5,10 @@
 [phases.install]
     cmds = ["python3 -m venv /opt/venv", "/opt/venv/bin/pip install -r requirements.txt"]
 
+[start]
+    cmd = "/opt/venv/bin/python main.py"
+
 [variables]
     GDAL_DATA = "/usr/share/gdal"
     PROJ_LIB = "/usr/share/proj"
+    PORT = "8080"
