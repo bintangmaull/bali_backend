@@ -14,7 +14,7 @@ import pandas as pd
 import json
 
 DISASTER_COLS = {
-    'gempa':    {'prefix': 'pga',  'scales': ['100','200','250','500','1000']},
+    # 'gempa' is handled separately via migrate_gempa_to_rekap.py for loss ratios
     'tsunami':  {'prefix': '',     'scales': ['inundansi']},
     'banjir_r': {'prefix': 'r',    'scales': ['2','5','10','25','50','100','250']},
     'banjir_rc':{'prefix': 'rc',   'scales': ['2','5','10','25','50','100','250']},

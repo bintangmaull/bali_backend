@@ -165,11 +165,30 @@ class Bangunan(db.Model):
     luas          = db.Column(db.Float, nullable=False)
     nama_gedung   = db.Column(db.String(255))
     alamat        = db.Column(db.String(255))
-    kota          = db.Column(db.String(255), nullable=False, unique=True)
-    provinsi      = db.Column(db.String(255), nullable=False, unique=True)
+    kota          = db.Column(db.String(255), nullable=False)
+    provinsi      = db.Column(db.String(255), nullable=False)
     geom          = db.Column(Geometry('POINT', srid=4326), nullable=False)
     jumlah_lantai = db.Column(db.Integer)
     kode_bangunan = db.Column(db.String(255))
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+
+class ExposureBMNResidential(db.Model):
+    __tablename__ = "exposure_bmn_residential"
+
+    id            = db.Column(db.String(50), primary_key=True)
+    lon           = db.Column(db.Float, nullable=False)
+    lat           = db.Column(db.Float, nullable=False)
+    taxonomy      = db.Column(db.String(100))
+    jumlah_lantai = db.Column(db.Integer)
+    nama_gedung   = db.Column(db.String(255))
+    luas          = db.Column(db.Float)
+    nilai_aset    = db.Column(db.Float)
+    kota          = db.Column(db.String(255))
+    provinsi      = db.Column(db.String(255))
+    geom          = db.Column(Geometry('POINT', srid=4326), nullable=False)
 
     def to_dict(self):
         return {col.name: getattr(self, col.name) for col in self.__table__.columns}
@@ -241,6 +260,18 @@ class HasilAALProvinsi(db.Model):
     aal_r_fd           = db.Column(db.Float, default=0)
     aal_rc_fd          = db.Column(db.Float, default=0)
 
+    # --- BMN ---
+    aal_pga_bmn         = db.Column(db.Float, default=0)
+    aal_inundansi_bmn   = db.Column(db.Float, default=0)
+    aal_r_bmn           = db.Column(db.Float, default=0)
+    aal_rc_bmn          = db.Column(db.Float, default=0)
+
+    # --- Residential (res) ---
+    aal_pga_res         = db.Column(db.Float, default=0)
+    aal_inundansi_res   = db.Column(db.Float, default=0)
+    aal_r_res           = db.Column(db.Float, default=0)
+    aal_rc_res          = db.Column(db.Float, default=0)
+
     # --- Electricity ---
     aal_pga_electricity       = db.Column(db.Float, default=0)
     aal_inundansi_electricity = db.Column(db.Float, default=0)
@@ -265,8 +296,30 @@ class HasilAALProvinsi(db.Model):
     aal_r_total          = db.Column(db.Float, default=0)
     aal_rc_total         = db.Column(db.Float, default=0)
 
+    # --- Exposure (Total Asset) ---
+    hotel               = db.Column(db.Float, default=0)
+    res                 = db.Column(db.Float, default=0)
+    airport             = db.Column(db.Float, default=0)
+
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+
+
+class HasilPMLGempaKota(db.Model):
+    __tablename__ = 'hasil_pml_gempa_kota'
+    id_kota = db.Column(db.String(100), primary_key=True)
+    return_period = db.Column(db.Integer, primary_key=True)
+    
+    pml_airport = db.Column(db.Float, default=0)
+    pml_fd = db.Column(db.Float, default=0)
+    pml_electricity = db.Column(db.Float, default=0)
+    pml_fs = db.Column(db.Float, default=0)
+    pml_hotel = db.Column(db.Float, default=0)
+    pml_bmn = db.Column(db.Float, default=0)
+    pml_res = db.Column(db.Float, default=0)
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 # === Rekap Aset per Kota ===
@@ -414,14 +467,37 @@ class ActivityLog(db.Model):
     detail      = db.Column(db.Text, nullable=True)
     timestamp   = db.Column(db.DateTime, server_default=db.func.now())
 
+class LossRatioGempa(db.Model):
+    __tablename__ = 'loss_ratio_gempa'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kota = db.Column(db.String(255), nullable=False)
+    return_period = db.Column(db.Integer, nullable=False)
+    airport_loss_ratio = db.Column(db.Float)
+    educational_loss_ratio = db.Column(db.Float)
+    electricity_loss_ratio = db.Column(db.Float)
+    healthcare_loss_ratio = db.Column(db.Float)
+    hotel_loss_ratio = db.Column(db.Float)
+    residential_loss_ratio = db.Column(db.Float)
+    bmn_loss_ratio = db.Column(db.Float)
+
     def to_dict(self):
-        return {
-            'id': self.id,
-            'user_nama': self.user_nama,
-            'user_email': self.user_email,
-            'action': self.action,
-            'target': self.target,
-            'target_id': self.target_id,
-            'detail': self.detail,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-        }
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+
+class LossDroughtSawah(db.Model):
+    """Drought (Kekeringan) rice field loss values per city, return period, and climate scenario."""
+    __tablename__ = 'loss_drought_sawah'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kota = db.Column(db.String(255), nullable=False)
+    return_period = db.Column(db.Integer, nullable=False)
+    climate_change = db.Column(db.String(10), nullable=False)  # 'gpm' or 'mme'
+    loss_2022_idr = db.Column(db.Float)
+    loss_2025_idr = db.Column(db.Float)
+    loss_2028_idr = db.Column(db.Float)
+    loss_2022_usd = db.Column(db.Float)
+    loss_2025_usd = db.Column(db.Float)
+    loss_2028_usd = db.Column(db.Float)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}

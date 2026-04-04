@@ -5,6 +5,8 @@ from urllib.parse import quote_plus
 class Config:
     """Konfigurasi Flask untuk Supabase"""
 
+
+
     DB_USER = os.getenv('DB_USER', 'postgres.btwsqklqtqgrlmvysgsc')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '@Guyengan123')
     DB_HOST = os.getenv('DB_HOST', 'aws-1-ap-northeast-1.pooler.supabase.com')
@@ -25,6 +27,16 @@ class Config:
         )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Konfigurasi Pool SQLAlchemy untuk Supabase PgBouncer (Transaction Mode)
+    # Ini mencegah error "server closed the connection unexpectedly"
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,        # Cek koneksi sebelum digunakan (menghindari error server closed)
+        "pool_recycle": 300,          # Recycle koneksi setiap 5 menit sebelum Supabase mematikannya
+        "pool_timeout": 30,           # Waktu tunggu maksimal untuk mendapatkan koneksi dari pool (detik)
+        "pool_size": 10,              # Jumlah koneksi permanen di pool
+        "max_overflow": 15            # Ekstra koneksi jika pool penuh
+    }
 
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(BASE_DIR, 'uploads'))

@@ -131,9 +131,9 @@ def _compute_hsbgn_adjusted(bld: pd.DataFrame) -> pd.DataFrame:
     
     # Multiplier mapping (case-insensitive)
     multipliers = {
-        'airport': 1.5,
-        'hotel':   1.2,
-        'electricity': 1.3,
+        'airport': 1.0,
+        'hotel':   1.0,
+        'electricity': 1.0,
         # FS & FD menggunakan base (multiplier 1.0)
     }
     
@@ -224,6 +224,32 @@ def _compute_all_dl(bld, disaster_data):
             dl_cols.append(col_db)
             logger.debug(f"{col_db} sample: {bld[col_db].head(3).tolist()}")
 
+    # === TEMPORARY: PRESERVE GEMPA DATA ===
+    try:
+        from app.extensions import db
+        import pandas as pd
+        from sqlalchemy import text
+        
+        gempa_cols = [
+            'direct_loss_pga_100', 'direct_loss_pga_200', 
+            'direct_loss_pga_250', 'direct_loss_pga_500', 
+            'direct_loss_pga_1000'
+        ]
+        
+        sql = f"SELECT id_bangunan, {', '.join(gempa_cols)} FROM hasil_proses_directloss"
+        with db.engine.connect() as conn:
+            existing_gempa = pd.read_sql(text(sql), conn)
+            
+        bld_temp = bld.merge(existing_gempa, on='id_bangunan', how='left')
+        for c in gempa_cols:
+            bld[c] = bld_temp[c].fillna(0.0)
+            
+        dl_cols.extend(gempa_cols)
+        logger.debug("✅ Preserved existing gempa direct loss data from DB")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to preserve existing gempa data: {e}")
+    # =======================================
+
     return list(dict.fromkeys(dl_cols))  # unique, preserve order
 
 
@@ -251,6 +277,9 @@ def process_all_disasters():
     bld['luas']  = bld['luas'].fillna(0)
     bld['taxonomy'] = bld['taxonomy'].fillna('').str.lower()
     bld = _compute_hsbgn_adjusted(bld)
+    
+    # Calculate asset value for exposure columns
+    bld['building_asset'] = bld['luas'] * bld['adjusted_hsbgn']
 
     # 2) Hazard data
     disaster_data = get_all_disaster_data()
@@ -276,7 +305,7 @@ def process_all_disasters():
 
     # 5) Dump CSV
     csv_path = os.path.join(DEBUG_DIR, "directloss_all.csv")
-    cols_to_dump = ["kota", "kode_bangunan"] + dl_cols
+    cols_to_dump = ["kota", "kode_bangunan", "building_asset"] + dl_cols
     bld.to_csv(csv_path, index=False, sep=';', columns=cols_to_dump)
     logger.debug(f"📄 CSV DirectLoss subset for AAL: {csv_path}")
 
@@ -302,7 +331,20 @@ def _calculate_rekap_aset(bld: pd.DataFrame):
     
     # 2. Agregasi per kota
     from app.repository.repo_directloss import DISASTER_MAPPING
-    supported_types = ['fs', 'fd', 'electricity', 'hotel', 'airport']
+    from app.models.models_database import LossRatioGempa
+    
+    # Supported types matching LossRatioGempa and frontend expectations
+    supported_types = ['fs', 'fd', 'electricity', 'hotel', 'airport', 'residential', 'bmn']
+    # Mapping for dl_exposure JSON (fs/fd used in frontend for healthcare/educational)
+    exposure_mapping = {
+        'fs': 'healthcare',
+        'fd': 'educational',
+        'electricity': 'electricity',
+        'hotel': 'hotel',
+        'airport': 'airport',
+        'residential': 'residential',
+        'bmn': 'bmn'
+    }
     
     results = []
     for kota, group in df.groupby('kota'):
@@ -334,8 +376,34 @@ def _calculate_rekap_aset(bld: pd.DataFrame):
                 dl_col = f"direct_loss_{rp_suffix}"
                 
                 # Total for the whole city
-                sum_val = float(group[dl_col].sum()) if dl_col in group.columns else 0.0
-                ratio = ((sum_val / total_value) * 100.0) if total_value > 0 else 0.0
+                sum_val = 0.0
+                ratio = 0.0
+
+                if name == 'gempa':
+                    # Fetch from LossRatioGempa table as requested by USER
+                    # rp_suffix example: "100" or "200"
+                    try:
+                        lr_rec = db.session.query(LossRatioGempa).filter(
+                            LossRatioGempa.kota == kota,
+                            LossRatioGempa.return_period == int(s)
+                        ).first()
+                        
+                        if lr_rec:
+                            # Use average ratio for the city-level summary
+                            ratios_to_avg = [
+                                getattr(lr_rec, f"{exposure_mapping[bt].lower()}_loss_ratio", 0) or 0
+                                for bt in supported_types
+                            ]
+                            ratio = sum(ratios_to_avg) / len(ratios_to_avg) if ratios_to_avg else 0.0
+                            sum_val = total_value * ratio # Representative sum based on avg ratio
+                        else:
+                            logger.warning(f"⚠️ No LossRatioGempa record for {kota} RP {s}")
+                    except Exception as e:
+                        logger.error(f"⚠️ Failed to fetch LossRatioGempa: {e}")
+                else:
+                    # Original logic for other disasters
+                    sum_val = float(group[dl_col].sum()) if dl_col in group.columns else 0.0
+                    ratio = ((sum_val / total_value) * 100.0) if total_value > 0 else 0.0
                 
                 res[f'dl_sum_{rp_suffix}'] = sum_val
                 res[f'ratio_{rp_suffix}'] = ratio
@@ -345,9 +413,15 @@ def _calculate_rekap_aset(bld: pd.DataFrame):
                     if btype not in dl_exposure_dict:
                         dl_exposure_dict[btype] = {}
                     
-                    sub = group[group['kode_bangunan'].str.lower() == btype]
-                    sum_val_exp = float(sub[dl_col].sum()) if dl_col in sub.columns else 0.0
-                    dl_exposure_dict[btype][rp_suffix] = sum_val_exp
+                    if name == 'gempa' and lr_rec:
+                        # Use ratio from LossRatioGempa
+                        field_name = f"{exposure_mapping[btype].lower()}_loss_ratio"
+                        val = getattr(lr_rec, field_name, 0) or 0
+                        dl_exposure_dict[btype][rp_suffix] = float(val)
+                    else:
+                        sub = group[group['kode_bangunan'].str.lower() == btype]
+                        sum_val_exp = float(sub[dl_col].sum()) if dl_col in sub.columns else 0.0
+                        dl_exposure_dict[btype][rp_suffix] = sum_val_exp
 
         import json
         res['dl_exposure'] = dl_exposure_dict
@@ -413,13 +487,25 @@ def calculate_aal():
                     col = _col_direct_loss(disaster, rp)
                     losses.append(row.get(col, 0))
 
-                aal_value = float(cast(Any, np.trapz(y=losses, x=probabilities)))
+                # Map building code to column suffix
+                suffix = kode_bangunan.lower()
+                if suffix == 'residential':
+                    suffix = 'res'
 
-                aal_col = f'aal_{_disaster_prefix(disaster)}_{kode_bangunan.lower()}'
+                aal_col = f'aal_{_disaster_prefix(disaster)}_{suffix}'
                 kota_result[aal_col] = float(cast(Any, kota_result[aal_col])) + aal_value
                 aal_total_disaster   = float(aal_total_disaster) + aal_value
 
             kota_result[f'aal_{_disaster_prefix(disaster)}_total'] = float(aal_total_disaster)
+
+        # Aggregation of Exposure (Total Asset) per category
+        for _, row in kota_df.iterrows():
+            suffix = row['kode_bangunan'].lower()
+            if suffix == 'residential': suffix = 'res'
+            
+            # Only add for requested exposure columns
+            if suffix in ['hotel', 'res', 'airport']:
+                kota_result[suffix] = float(kota_result.get(suffix, 0)) + float(row.get('building_asset', 0))
 
         results.append(kota_result)
 
@@ -468,6 +554,7 @@ def calculate_aal():
         logger.error(f"❌ Saving AAL failed: {e}")
         raise
 
+
     logger.debug("=== END calculate_aal ===")
 
 
@@ -480,6 +567,27 @@ def _disaster_prefix(disaster_name):
         'banjir_rc': 'rc',
     }
     return mapping.get(disaster_name, disaster_name)
+
+
+def recalc_city_rekap_only(kota_name: str):
+    """
+    Hanya mengupdate tabel rekap_aset_kota berdasarkan data bangunan saat ini.
+    Sangat cepat karena tidak ada perhitungan hazard join.
+    """
+    logger.debug(f"=== START city rekap only for: {kota_name} ===")
+    bld = get_city_bangunan_data(kota_name)
+    if bld.empty:
+        # Jika kosong, hapus rekap kota tersebut
+        db.session.query(RekapAsetKota).filter_by(id_kota=kota_name).delete()
+        db.session.commit()
+        return
+    
+    # HSBGN Dinamis
+    bld = _compute_hsbgn_adjusted(bld)
+    # Rekap Aset
+    _calculate_rekap_aset(bld)
+    db.session.commit()
+    logger.debug(f"=== END city rekap only for: {kota_name} ===")
 
 
 # =============================================================================
@@ -503,7 +611,7 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
                 LOWER(b.taxonomy) AS taxonomy,
                 b.kota, LOWER(split_part(b.id_bangunan, '_', 1)) AS kode_bangunan
             FROM bangunan_copy b
-            LEFT JOIN kota k ON b.kota = k.kota
+            LEFT JOIN kota k ON TRIM(LOWER(k.kota)) = TRIM(LOWER(b.kota))
             WHERE b.id_bangunan = :id
         """)
         b = conn.execute(b_query, {"id": bangunan_id}).mappings().first()
@@ -523,9 +631,9 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
         
         # Multiplier Tipe
         multipliers = {
-            'airport': 1.5,
-            'hotel':   1.2,
-            'electricity': 1.3,
+            'airport': 1.0,
+            'hotel':   1.0,
+            'electricity': 1.0,
         }
         multiplier = multipliers.get(str(kode_bgn).lower(), 1.0)
         hsbgn_val = base_hsbgn * multiplier
@@ -536,6 +644,11 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
         direct_losses = {}
 
         for name, cfg in DISASTER_MAPPING.items():
+            # === TEMPORARY: SKIP GEMPA ===
+            if name == 'gempa':
+                continue
+            # ===============================
+
             pre       = cfg['prefix']
             scales    = cfg['scales']
             threshold = cfg['threshold']
@@ -561,6 +674,14 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
             subq_sql = ", ".join(vcols)
             outer_sql = ", ".join([expr.split(" AS ")[1].strip() for expr in vcols])
 
+            shape = cfg.get("shape", "circle")
+            if shape == "box":
+                where_clause = f"r.geom && ST_Expand(b.geom, {threshold} / 111320.0)"
+                order_by = f"b.geom <-> r.geom"
+            else:
+                where_clause = f"ST_DWithin(b.geom::geography, r.geom::geography, {threshold})"
+                order_by = f"b.geom::geography <-> r.geom::geography"
+
             sql = text(f"""
                 SELECT {outer_sql}
                 FROM bangunan_copy b
@@ -568,8 +689,8 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
                     SELECT {subq_sql}
                     FROM {raw_tbl} r
                     JOIN {dmgr} h USING(id_lokasi)
-                    WHERE ST_DWithin(b.geom::geography, r.geom::geography, {threshold})
-                    ORDER BY b.geom::geography <-> r.geom::geography
+                    WHERE {where_clause}
+                    ORDER BY {order_by}
                     LIMIT 1
                 ) AS near ON TRUE
                 WHERE b.id_bangunan = :id
@@ -599,6 +720,16 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
         if old_record else {}
     )
 
+    # === TEMPORARY: PRESERVE GEMPA DATA ===
+    gempa_cols = [
+        'direct_loss_pga_100', 'direct_loss_pga_200', 
+        'direct_loss_pga_250', 'direct_loss_pga_500', 
+        'direct_loss_pga_1000'
+    ]
+    for c in gempa_cols:
+        direct_losses[c] = old_losses.get(c, 0.0)
+    # =======================================
+
     if old_record:
         db.session.delete(old_record)
         
@@ -607,36 +738,48 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
     db.session.commit()
     logger.debug(f"✅ DirectLoss (recalc) saved for {bangunan_id} in single transaction")
 
-    # 4. Delta AAL per bencana
-    aal_row = db.session.query(HasilAALProvinsi).filter_by(id_kota=kota_val).one_or_none()
-    if not aal_row:
-        raise RuntimeError(f"AAL untuk kota '{kota_val}' tidak ditemukan. Jalankan proses AAL penuh dahulu.")
+    try:
+        # 4. Delta AAL per bencana
+        aal_row = db.session.query(HasilAALProvinsi).filter_by(id_kota=kota_val).one_or_none()
+        if not aal_row:
+            raise RuntimeError(f"AAL untuk kota '{kota_val}' tidak ditemukan. Jalankan proses AAL penuh dahulu.")
 
-    for disaster, prob_config in PROB_CONFIG.items():
-        dis_pre = _disaster_prefix(disaster)
-        sorted_probs_data = sorted(prob_config.items(), key=lambda item: item[1])
-        probabilities = [0] + [prob for _, prob in sorted_probs_data]
+        for disaster, prob_config in PROB_CONFIG.items():
+            dis_pre = _disaster_prefix(disaster)
+            sorted_probs_data = sorted(prob_config.items(), key=lambda item: item[1])
+            probabilities = [0] + [prob for _, prob in sorted_probs_data]
 
-        old_losses_sorted = [0] + [old_losses.get(_col_direct_loss(disaster, rp), 0) for rp, _ in sorted_probs_data]
-        old_aal = np.trapz(y=old_losses_sorted, x=probabilities)
+            old_losses_sorted = [0] + [old_losses.get(_col_direct_loss(disaster, rp), 0) for rp, _ in sorted_probs_data]
+            old_aal = np.trapz(y=old_losses_sorted, x=probabilities)
 
-        new_losses_sorted = [0] + [direct_losses.get(_col_direct_loss(disaster, rp), 0) for rp, _ in sorted_probs_data]
-        new_aal = np.trapz(y=new_losses_sorted, x=probabilities)
+            new_losses_sorted = [0] + [direct_losses.get(_col_direct_loss(disaster, rp), 0) for rp, _ in sorted_probs_data]
+            new_aal = np.trapz(y=new_losses_sorted, x=probabilities)
 
-        delta_aal = new_aal - old_aal
+            delta_aal = new_aal - old_aal
 
-        col_bgn = f"aal_{dis_pre}_{kode_bgn.lower()}"
-        col_tot = f"aal_{dis_pre}_total"
+            col_bgn = f"aal_{dis_pre}_{kode_bgn.lower()}"
+            col_tot = f"aal_{dis_pre}_total"
 
-        current_bgn = getattr(aal_row, col_bgn, 0) or 0
-        current_tot = getattr(aal_row, col_tot, 0) or 0
+            current_bgn = getattr(aal_row, col_bgn, 0) or 0
+            current_tot = getattr(aal_row, col_tot, 0) or 0
 
-        setattr(aal_row, col_bgn, float(current_bgn + delta_aal))
-        setattr(aal_row, col_tot, float(current_tot + delta_aal))
-        logger.debug(f"Delta AAL {disaster}: {delta_aal:.2f}. Updating {col_bgn} and {col_tot}")
+            setattr(aal_row, col_bgn, float(current_bgn + delta_aal))
+            setattr(aal_row, col_tot, float(current_tot + delta_aal))
+            logger.debug(f"Delta AAL {disaster}: {delta_aal:.2f}. Updating {col_bgn} and {col_tot}")
 
-    db.session.commit()
-    logger.info(f"✅ AAL incrementally updated for kota '{kota_val}'")
+        db.session.commit()
+        logger.info(f"✅ AAL incrementally updated for kota '{kota_val}'")
+
+        # 5. UPDATE REKAP KOTA (FAST)
+        recalc_city_rekap_only(kota_val)
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Incremental recalc failed: {e}")
+        raise
+    finally:
+        db.session.close()
+
     logger.debug(f"=== END incremental recalc for {bangunan_id} ===")
 
     return {"direct_losses": direct_losses, "status": "success"}
@@ -754,6 +897,8 @@ def recalc_city_directloss_and_aal(kota_name: str):
     except Exception as e:
         logger.warning(f"⚠️ Gagal sinkronisasi Total Keseluruhan: {e}")
         db.session.rollback()
+    finally:
+        db.session.close()
 
     logger.info(f"=== END city recalc for {kota_name} ===")
     return {"status": "success", "city": kota_name}

@@ -199,5 +199,121 @@ def download_aal_kota():
     )
 
 
+
+@gedung_bp.route('/drought-sawah-loss', methods=['GET'])
+def get_drought_sawah_loss():
+    """
+    Return drought rice field loss values for all cities and return periods.
+    Response shape:
+    {
+      "return_periods": [25, 50, 100, 250],
+      "cities": ["BADUNG", ...],
+      "gpm": { "25": [{"kota": "BADUNG", "loss_2022": ..., "loss_2025": ..., "loss_2028": ...}, ...], ... },
+      "mme": { ... }
+    }
+    """
+    from app.extensions import db
+    from sqlalchemy import text
+
+    rows = db.session.execute(text("""
+        SELECT kota, return_period, climate_change,
+               loss_2022_idr, loss_2025_idr, loss_2028_idr
+        FROM loss_drought_sawah
+        ORDER BY climate_change, return_period, kota
+    """)).fetchall()
+
+    result = { 'gpm': {}, 'mme': {} }
+    cities_set = set()
+    rps_set = set()
+
+    for row in rows:
+        kota, rp, cc, l22, l25, l28 = row
+        cc = cc.lower()
+        rp_key = str(rp)
+        cities_set.add(kota)
+        rps_set.add(rp)
+        if cc not in result:
+            continue
+        if rp_key not in result[cc]:
+            result[cc][rp_key] = []
+        result[cc][rp_key].append({
+            'kota': kota,
+            'loss_2022': l22 or 0,
+            'loss_2025': l25 or 0,
+            'loss_2028': l28 or 0,
+        })
+
+    result['return_periods'] = sorted(list(rps_set))
+    result['cities'] = sorted(list(cities_set))
+    return jsonify(result)
+
+
+@gedung_bp.route('/flood-sawah-loss', methods=['GET'])
+def get_flood_sawah_loss():
+    """
+    Return flood rice field loss values for all cities and return periods.
+    Response shape:
+    {
+      "return_periods": [2, 5, 10, 25, 50, 100, 250],
+      "cities": ["BADUNG", ...],
+      "r":  { "2": [{"kota": "BADUNG", "loss_2022": ..., "loss_2025": ..., "loss_2028": ...}, ...], ... },
+      "rc": { ... }
+    }
+    r  = non-climate-change scenario
+    rc = climate-change scenario
+    """
+    from app.extensions import db
+    from sqlalchemy import text
+
+    rows = db.session.execute(text("""
+        SELECT kota, return_period, climate_change,
+               loss_2022_idr, loss_2025_idr, loss_2028_idr
+        FROM loss_flood_sawah
+        ORDER BY climate_change, return_period, kota
+    """)).fetchall()
+
+    result = { 'r': {}, 'rc': {} }
+    cities_set = set()
+    rps_set = set()
+
+    for row in rows:
+        kota, rp, cc, l22, l25, l28 = row
+        cc = cc.lower()
+        rp_key = str(rp)
+        cities_set.add(kota)
+        rps_set.add(rp)
+        if cc not in result:
+            continue
+        if rp_key not in result[cc]:
+            result[cc][rp_key] = []
+        result[cc][rp_key].append({
+            'kota': kota,
+            'loss_2022': l22 or 0,
+            'loss_2025': l25 or 0,
+            'loss_2028': l28 or 0,
+        })
+
+    result['return_periods'] = sorted(list(rps_set))
+    result['cities'] = sorted(list(cities_set))
+    return jsonify(result)
+
+
+@gedung_bp.route('/pml-gempa', methods=['GET'])
+def get_pml_gempa():
+    """
+    Return PML values for earthquake per city and return period.
+    """
+    from app.models.models_database import HasilPMLGempaKota
+    kota = request.args.get('kota')
+    
+    query = HasilPMLGempaKota.query
+    if kota:
+        query = query.filter(HasilPMLGempaKota.id_kota.ilike(kota))
+    
+    rows = query.order_by(HasilPMLGempaKota.return_period).all()
+    
+    return jsonify([r.to_dict() for r in rows])
+
+
 def setup_visualisasi_routes(app):
     app.register_blueprint(gedung_bp)

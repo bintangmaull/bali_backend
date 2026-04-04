@@ -32,7 +32,7 @@ def get_bangunan_data():
             COALESCE(k.hsbgn_sederhana, 0.0) AS hsbgn_sederhana,
             COALESCE(k.hsbgn_tidaksederhana, 0.0) AS hsbgn_tidaksederhana
         FROM bangunan_copy b
-        LEFT JOIN kota k ON b.kota = k.kota;
+        LEFT JOIN kota k ON TRIM(LOWER(k.kota)) = TRIM(LOWER(b.kota));
     """)
     engine = get_db_connection()
     with engine.connect() as conn:
@@ -55,7 +55,7 @@ def get_city_bangunan_data(kota_name):
             COALESCE(k.hsbgn_sederhana, 0.0) AS hsbgn_sederhana,
             COALESCE(k.hsbgn_tidaksederhana, 0.0) AS hsbgn_tidaksederhana
         FROM bangunan_copy b
-        LEFT JOIN kota k ON b.kota = k.kota
+        LEFT JOIN kota k ON TRIM(LOWER(k.kota)) = TRIM(LOWER(b.kota))
         WHERE b.kota = :kota;
     """)
     engine = get_db_connection()
@@ -98,27 +98,30 @@ DISASTER_MAPPING = {
         "dmgr":      "dmg_ratio_tsunami",
         "prefix":    "",
         "scales":    ["inundansi"],
-        "threshold": 110,
+        "threshold": 100,
         "vcols":     lambda pre, s: _vcols_taxonomy("", "inundansi"),
         "mode":      "taxonomy",
+        "shape":     "box",
     },
     "banjir_r": {
         "raw":       "model_intensitas_banjir",
         "dmgr":      "dmg_ratio_banjir",
         "prefix":    "r",
         "scales":    ["2", "5", "10", "25", "50", "100", "250"],
-        "threshold": 17,
+        "threshold": 15,
         "vcols":     _vcols_lantai,
         "mode":      "lantai",     # jumlah_lantai based
+        "shape":     "box",
     },
     "banjir_rc": {
         "raw":       "model_intensitas_banjir",
         "dmgr":      "dmg_ratio_banjir",
         "prefix":    "rc",
         "scales":    ["2", "5", "10", "25", "50", "100", "250"],
-        "threshold": 17,
+        "threshold": 15,
         "vcols":     _vcols_lantai,
         "mode":      "lantai",
+        "shape":     "box",
     },
 }
 
@@ -133,6 +136,10 @@ def _build_disaster_query(mapping, kota_name=None):
 
     with engine.connect() as conn:
         for name, cfg in mapping.items():
+            # === TEMPORARY: SKIP GEMPA ===
+            if name == 'gempa':
+                continue
+            # ===============================
             raw_table  = cfg["raw"]
             dmgr_table = cfg["dmgr"]
             pre        = cfg["prefix"]
@@ -151,6 +158,12 @@ def _build_disaster_query(mapping, kota_name=None):
             subq_cols  = ",\n       ".join(subq_parts)
             outer_cols = ",\n  ".join(sel_parts)
 
+            shape      = cfg.get("shape", "circle")
+            if shape == "box":
+                where_clause = f"r.geom && ST_Expand(b.geom, {threshold} / 111320.0)"
+            else:
+                where_clause = f"ST_DWithin(b.geom, r.geom, {threshold} / 111320.0)"
+
             if kota_name:
                 from_clause = "(SELECT id_bangunan, geom FROM bangunan_copy WHERE kota = :kota) b"
             else:
@@ -166,11 +179,7 @@ def _build_disaster_query(mapping, kota_name=None):
                     {subq_cols}
                   FROM {raw_table} r
                   JOIN {dmgr_table} h ON r.id_lokasi::varchar = h.id_lokasi::varchar
-                  WHERE ST_DWithin(
-                    b.geom,
-                    r.geom,
-                    {threshold} / 111320.0
-                  )
+                  WHERE {where_clause}
                   ORDER BY b.geom <-> r.geom
                   LIMIT 1
                 ) AS near ON TRUE;

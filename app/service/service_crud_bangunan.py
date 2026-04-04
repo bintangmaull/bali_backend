@@ -11,7 +11,7 @@ from app.extensions import db
 from app.repository.repo_crud_bangunan import BangunanRepository
 from app.models.models_database import HasilProsesDirectLoss, HasilAALProvinsi
 from app.repository.repo_directloss import get_bangunan_data
-from app.service.service_directloss import recalc_building_directloss_and_aal  # << import baru
+from app.service.service_directloss import recalc_building_directloss_and_aal, recalc_city_rekap_only  # << import baru
 
 # Probabilitas per bencana sesuai return period (dipakai di delete_bangunan)
 PROB_CONFIG = {
@@ -112,6 +112,9 @@ class BangunanService:
             # Commit semua perubahan (update AAL dan delete) dalam satu transaksi
             db.session.commit()
             logger.info(f"✅ Successfully deleted {bangunan_id} and updated AAL for kota '{kota_val}'")
+
+            # 5. UPDATE REKAP KOTA (FAST)
+            recalc_city_rekap_only(kota_val)
 
         except Exception as e:
             db.session.rollback()

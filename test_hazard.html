@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- Version: 2.0.1 - Supabase Auth Fixed -->
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,15 +12,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
       --bg-base: #0d1117;
       --bg-surface: #161b22;
-      --bg-ele: rgba(255,255,255,.05);
-      --border: rgba(255,255,255,.09);
+      --bg-ele: rgba(255, 255, 255, .05);
+      --border: rgba(255, 255, 255, .09);
       --primary: #6366f1;
-      --primary-glow: rgba(99,102,241,.35);
+      --primary-glow: rgba(99, 102, 241, .35);
       --accent: #22d3ee;
       --text: #e2e8f0;
       --text-muted: #64748b;
@@ -45,54 +52,105 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 20px;
-      background: rgba(22,27,34,.97);
+      background: rgba(22, 27, 34, .97);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       z-index: 1000;
       flex-shrink: 0;
       gap: 12px;
     }
-    .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
     .brand-icon {
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       background: linear-gradient(135deg, var(--primary), var(--accent));
       border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 18px;
     }
-    .brand-title { font-size: 16px; font-weight: 700; }
-    .brand-sub   { font-size: 11px; color: var(--text-muted); }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
 
     /* Pill: status sumber data */
     .status-pill {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; color: var(--text-muted);
-      background: var(--bg-ele); border: 1px solid var(--border);
-      border-radius: 20px; padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-ele);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
     }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
-    .dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+    }
 
     /* Layout */
-    .main { display: flex; flex: 1; overflow: hidden; }
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
 
     /* Sidebar */
     .sidebar {
-      width: 300px; flex-shrink: 0;
+      width: 300px;
+      flex-shrink: 0;
       background: var(--bg-surface);
       border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      overflow-y: auto; padding: 16px; gap: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 14px;
     }
 
     .sec-title {
-      font-size: 10px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
     }
 
-    label { font-size: 12px; color: var(--text-sub); display: block; margin-bottom: 4px; }
+    label {
+      font-size: 12px;
+      color: var(--text-sub);
+      display: block;
+      margin-bottom: 4px;
+    }
 
-    select, input[type="number"] {
+    select,
+    input[type="number"] {
       width: 100%;
       background: var(--bg-ele);
       border: 1px solid var(--border);
@@ -109,537 +167,710 @@
       background-repeat: no-repeat;
       background-position: right 12px center;
     }
-    input[type="number"] { background-image: none; }
-    select:focus, input[type="number"]:focus { border-color: var(--primary); }
-    select:disabled { opacity: .4; cursor: not-allowed; }
+
+    input[type="number"] {
+      background-image: none;
+    }
+
+    select:focus,
+    input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    select:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
 
     /* Btn */
     .btn {
-      width: 100%; padding: 10px 16px; border: none; border-radius: 8px;
-      font-family: inherit; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: all .2s;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
     }
+
     .btn-primary {
       background: linear-gradient(135deg, var(--primary), #8b5cf6);
-      color: #fff; box-shadow: 0 4px 14px var(--primary-glow);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--primary-glow);
     }
-    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px var(--primary-glow); }
-    .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px var(--primary-glow);
+    }
+
+    .btn-primary:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .btn-ghost {
-      background: var(--bg-ele); border: 1px solid var(--border);
+      background: var(--bg-ele);
+      border: 1px solid var(--border);
       color: var(--text-sub);
     }
-    .btn-ghost:hover { background: rgba(255,255,255,.1); color: var(--text); }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, .1);
+      color: var(--text);
+    }
 
     /* Status box */
     #status {
-      font-size: 12px; padding: 10px 12px; border-radius: 8px;
-      background: var(--bg-ele); border: 1px solid var(--border);
-      min-height: 44px; white-space: pre-wrap; word-break: break-all;
-      color: var(--text-sub); line-height: 1.6;
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--bg-ele);
+      border: 1px solid var(--border);
+      min-height: 44px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--text-sub);
+      line-height: 1.6;
     }
-    #status.ok  { color: var(--success); background: rgba(74,222,128,.07); border-color: rgba(74,222,128,.25); }
-    #status.err { color: var(--error);   background: rgba(248,113,113,.07); border-color: rgba(248,113,113,.25); }
-    #status.loading { color: var(--warning); background: rgba(250,204,21,.07); border-color: rgba(250,204,21,.25); }
+
+    #status.ok {
+      color: var(--success);
+      background: rgba(74, 222, 128, .07);
+      border-color: rgba(74, 222, 128, .25);
+    }
+
+    #status.err {
+      color: var(--error);
+      background: rgba(248, 113, 113, .07);
+      border-color: rgba(248, 113, 113, .25);
+    }
+
+    #status.loading {
+      color: var(--warning);
+      background: rgba(250, 204, 21, .07);
+      border-color: rgba(250, 204, 21, .25);
+    }
 
     /* Legend */
-    #legend-wrap { display: none; }
-    .legend-bar { height: 12px; border-radius: 4px; margin: 6px 0; }
-    .legend-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+    #legend-wrap {
+      display: none;
+    }
+
+    .legend-bar {
+      height: 12px;
+      border-radius: 4px;
+      margin: 6px 0;
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
 
     /* Info */
-    #info-box { font-size: 12px; display: none; }
-    #info-box table { width: 100%; border-collapse: collapse; }
-    #info-box td { padding: 2px 0; }
-    #info-box td:first-child { color: var(--text-muted); width: 45%; }
-    #info-box td:last-child { color: var(--text-sub); }
+    #info-box {
+      font-size: 12px;
+      display: none;
+    }
+
+    #info-box table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #info-box td {
+      padding: 2px 0;
+    }
+
+    #info-box td:first-child {
+      color: var(--text-muted);
+      width: 45%;
+    }
+
+    #info-box td:last-child {
+      color: var(--text-sub);
+    }
 
     /* Divider */
-    .divider { border: none; border-top: 1px solid var(--border); }
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+    }
 
     /* Row 2 */
-    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
 
     /* Opacity slider */
-    input[type="range"] { width: 100%; accent-color: var(--primary); cursor: pointer; }
-    .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
 
     /* Map */
-    #map { flex: 1; position: relative; }
+    #map {
+      flex: 1;
+      position: relative;
+    }
 
     /* Spinner */
     #spinner {
-      display: none; position: absolute; inset: 0;
-      background: rgba(0,0,0,.45); z-index: 9999;
-      align-items: center; justify-content: center;
-      flex-direction: column; gap: 12px;
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
     }
-    #spinner.active { display: flex; }
+
+    #spinner.active {
+      display: flex;
+    }
+
     .spin {
-      width: 44px; height: 44px;
-      border: 4px solid rgba(255,255,255,.12);
+      width: 44px;
+      height: 44px;
+      border: 4px solid rgba(255, 255, 255, .12);
       border-top-color: var(--primary);
       border-radius: 50%;
       animation: spin .8s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spin-label { color: var(--text); font-size: 13px; }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spin-label {
+      color: var(--text);
+      font-size: 13px;
+    }
 
     /* Hazard badge chips */
-    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
     .chip {
-      font-size: 11px; padding: 3px 10px; border-radius: 20px;
-      border: 1px solid var(--border); background: var(--bg-ele);
-      color: var(--text-sub); cursor: pointer; transition: all .15s;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-ele);
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all .15s;
       white-space: nowrap;
     }
-    .chip.active { border-color: var(--primary); background: rgba(99,102,241,.15); color: var(--text); }
+
+    .chip.active {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, .15);
+      color: var(--text);
+    }
 
     /* Tag info */
     .tag {
-      font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
-      background: rgba(34,211,238,.1); color: var(--accent); border: 1px solid rgba(34,211,238,.2);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(34, 211, 238, .1);
+      color: var(--accent);
+      border: 1px solid rgba(34, 211, 238, .2);
     }
 
-    .leaflet-container { background: #0d1117; }
-    .leaflet-control-attribution { font-size: 10px !important; }
-    .leaflet-popup-content-wrapper { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
-    .leaflet-popup-tip { background: var(--bg-surface); }
+    .leaflet-container {
+      background: #0d1117;
+    }
+
+    .leaflet-control-attribution {
+      font-size: 10px !important;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .leaflet-popup-tip {
+      background: var(--bg-surface);
+    }
   </style>
 </head>
+
 <body>
 
-<!-- Header -->
-<header>
-  <div class="brand">
-    <div class="brand-icon">🛰️</div>
-    <div>
-      <div class="brand-title">Hazard COG Viewer</div>
-      <div class="brand-sub">Cloud Optimized GeoTIFF — Bali Region</div>
-    </div>
-  </div>
-  <div class="status-pill">
-    <div class="dot" id="conn-dot"></div>
-    <span id="conn-label">Menghubungkan ke Supabase…</span>
-  </div>
-</header>
-
-<!-- Main -->
-<div class="main">
-
-  <!-- Sidebar -->
-  <div class="sidebar">
-
-    <!-- Jenis Bencana -->
-    <div>
-      <div class="sec-title">⚡ Jenis Bencana</div>
-      <div class="chip-group" id="hazard-chips">
-        <span style="font-size:12px;color:var(--text-muted)">Memuat data…</span>
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🛰️</div>
+      <div>
+        <div class="brand-title">Hazard COG Viewer</div>
+        <div class="brand-sub">Cloud Optimized GeoTIFF — Bali Region</div>
       </div>
     </div>
-
-    <hr class="divider" />
-
-    <!-- Return Period -->
-    <div>
-      <div class="sec-title">📅 Return Period</div>
-      <label>Pilih Return Period</label>
-      <select id="sel-rp" disabled>
-        <option value="">— Pilih jenis bencana dahulu —</option>
-      </select>
+    <div class="status-pill">
+      <div class="dot" id="conn-dot"></div>
+      <span id="conn-label">Menghubungkan ke Supabase…</span>
     </div>
+  </header>
 
-    <!-- Colormap -->
-    <div>
-      <div class="sec-title">🎨 Visualisasi</div>
-      <label>Colormap</label>
-      <select id="colormap">
-        <option value="jet">Jet</option>
-        <option value="viridis">Viridis</option>
-        <option value="hot">Hot</option>
-        <option value="rdylgn_r">RdYlGn (balik)</option>
-        <option value="plasma">Plasma</option>
-        <option value="turbo">Turbo</option>
-      </select>
+  <!-- Main -->
+  <div class="main">
 
-      <div class="row-2" style="margin-top:10px;">
-        <div>
-          <label>Min Value</label>
-          <input type="number" id="val-min" placeholder="auto" step="any" />
-        </div>
-        <div>
-          <label>Max Value</label>
-          <input type="number" id="val-max" placeholder="auto" step="any" />
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Jenis Bencana -->
+      <div>
+        <div class="sec-title">⚡ Jenis Bencana</div>
+        <div class="chip-group" id="hazard-chips">
+          <span style="font-size:12px;color:var(--text-muted)">Memuat data…</span>
         </div>
       </div>
 
-      <div style="margin-top:10px;">
-        <label>Opacity</label>
-        <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8" />
-        <div class="slider-labels"><span>10%</span><span id="opacity-label">80%</span><span>100%</span></div>
+      <hr class="divider" />
+
+      <!-- Return Period -->
+      <div>
+        <div class="sec-title">📅 Return Period</div>
+        <label>Pilih Return Period</label>
+        <select id="sel-rp" disabled>
+          <option value="">— Pilih jenis bencana dahulu —</option>
+        </select>
+      </div>
+
+      <!-- Colormap -->
+      <div>
+        <div class="sec-title">🎨 Visualisasi</div>
+        <label>Colormap</label>
+        <select id="colormap">
+          <option value="jet">Jet</option>
+          <option value="viridis">Viridis</option>
+          <option value="hot">Hot</option>
+          <option value="rdylgn_r">RdYlGn (balik)</option>
+          <option value="plasma">Plasma</option>
+          <option value="turbo">Turbo</option>
+        </select>
+
+        <div class="row-2" style="margin-top:10px;">
+          <div>
+            <label>Min Value</label>
+            <input type="number" id="val-min" placeholder="auto" step="any" />
+          </div>
+          <div>
+            <label>Max Value</label>
+            <input type="number" id="val-max" placeholder="auto" step="any" />
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>Opacity</label>
+          <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8" />
+          <div class="slider-labels"><span>10%</span><span id="opacity-label">80%</span><span>100%</span></div>
+        </div>
+      </div>
+
+      <!-- Action -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary" id="load-btn" onclick="loadSelectedCOG()" disabled>🚀 Tampilkan Layer</button>
+        <button class="btn btn-ghost" onclick="removeCOG()">🗑️ Hapus Layer</button>
+      </div>
+
+      <!-- Status -->
+      <div>
+        <div class="sec-title">📋 Status</div>
+        <div id="status">Pilih jenis bencana dan return period.</div>
+      </div>
+
+      <!-- Legend -->
+      <div id="legend-wrap">
+        <div class="sec-title">📊 Legend</div>
+        <div class="legend-bar" id="legend-bar"></div>
+        <div class="legend-labels"><span id="leg-min">0</span><span id="leg-max">1</span></div>
+      </div>
+
+      <!-- Raster Info -->
+      <div id="info-box">
+        <div class="sec-title">ℹ️ Raster Info</div>
+        <table>
+          <tr>
+            <td>File</td>
+            <td id="inf-name" style="color:var(--accent);font-size:11px;">—</td>
+          </tr>
+          <tr>
+            <td>Size</td>
+            <td id="inf-size">—</td>
+          </tr>
+          <tr>
+            <td>Min → Max</td>
+            <td id="inf-range">—</td>
+          </tr>
+          <tr>
+            <td>No-Data</td>
+            <td id="inf-nd">—</td>
+          </tr>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Map -->
+    <div id="map">
+      <div id="spinner">
+        <div class="spin"></div>
+        <div class="spin-label" id="spin-label">Memuat COG…</div>
       </div>
     </div>
 
-    <!-- Action -->
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <button class="btn btn-primary" id="load-btn" onclick="loadSelectedCOG()" disabled>🚀 Tampilkan Layer</button>
-      <button class="btn btn-ghost" onclick="removeCOG()">🗑️ Hapus Layer</button>
-    </div>
-
-    <!-- Status -->
-    <div>
-      <div class="sec-title">📋 Status</div>
-      <div id="status">Pilih jenis bencana dan return period.</div>
-    </div>
-
-    <!-- Legend -->
-    <div id="legend-wrap">
-      <div class="sec-title">📊 Legend</div>
-      <div class="legend-bar" id="legend-bar"></div>
-      <div class="legend-labels"><span id="leg-min">0</span><span id="leg-max">1</span></div>
-    </div>
-
-    <!-- Raster Info -->
-    <div id="info-box">
-      <div class="sec-title">ℹ️ Raster Info</div>
-      <table>
-        <tr><td>File</td><td id="inf-name" style="color:var(--accent);font-size:11px;">—</td></tr>
-        <tr><td>Size</td><td id="inf-size">—</td></tr>
-        <tr><td>Min → Max</td><td id="inf-range">—</td></tr>
-        <tr><td>No-Data</td><td id="inf-nd">—</td></tr>
-      </table>
-    </div>
-
   </div>
 
-  <!-- Map -->
-  <div id="map">
-    <div id="spinner">
-      <div class="spin"></div>
-      <div class="spin-label" id="spin-label">Memuat COG…</div>
-    </div>
-  </div>
+  <!-- Scripts (jsDelivr CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"
+    crossorigin></script>
 
-</div>
+  <script>
+    // ══════════════════════════════════════════════════════════════════
+    //  CONFIG — Supabase
+    // ══════════════════════════════════════════════════════════════════
+    const SB_URL = 'https://upcxonhddesvrvttvjjt.supabase.co';
+    const BUCKET = 'geotiff-cogs';
+    const BASE_URL = `${SB_URL}/storage/v1/object/public/${BUCKET}`;
 
-<!-- Scripts (jsDelivr CDN) -->
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js" crossorigin></script>
+    // Hazard label & metadata
+    const HAZARD_META = {
+      'earthquake': { label: '🌍 Gempa Bumi (PGA)', color: '#f97316', prefix: 'earthquake_bali_PGA_' },
+      'flood': { label: '🌊 Banjir (Kedalaman)', color: '#3b82f6', prefix: 'flood_depth_bali_r' },
+      'flood_comp': { label: '🌊 Banjir Kompensasi', color: '#8b5cf6', prefix: 'flood_depth_bali_rc' },
+      'tsunami': { label: '🌊 Tsunami', color: '#06b6d4', prefix: 'tsunami_bali' },
+      'drought_gpm': { label: '🌵 Kekeringan (GPM)', color: '#f59e0b', prefix: 'drought_bali_gpm_rp' },
+      'drought_mme': { label: '🌵 Kekeringan (MME)', color: '#d97706', prefix: 'drought_bali_mme_rp' },
+    };
 
-<script>
-// ══════════════════════════════════════════════════════════════════
-//  CONFIG — Supabase
-// ══════════════════════════════════════════════════════════════════
-const SB_URL    = 'https://upcxonhddesvrvttvjjt.supabase.co';
-const SB_ANONKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVwY3hvbmhkZGVzdnJ2dHR2amp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQ5NzY4MywiZXhwIjoyMDg5MDczNjgzfQ.Ssnddvp4zMyaFZm-rni-RbrZdETOpgEZV1fshsC0AZc';
-const BUCKET    = 'geotiff-cogs';
-const BASE_URL  = `${SB_URL}/storage/v1/object/public/${BUCKET}`;
+    // ══════════════════════════════════════════════════════════════════
+    //  Colormaps
+    // ══════════════════════════════════════════════════════════════════
+    const COLORMAPS = {
+      jet: [[0, 0, 128], [0, 0, 255], [0, 128, 255], [0, 255, 255], [128, 255, 128], [255, 255, 0], [255, 128, 0], [255, 0, 0], [128, 0, 0]],
+      viridis: [[68, 1, 84], [72, 40, 120], [62, 83, 160], [52, 119, 169], [36, 148, 158], [31, 172, 135], [73, 193, 109], [153, 213, 78], [230, 231, 62], [253, 231, 37]],
+      hot: [[0, 0, 0], [128, 0, 0], [255, 0, 0], [255, 128, 0], [255, 255, 0], [255, 255, 200], [255, 255, 255]],
+      rdylgn_r: [[0, 104, 55], [26, 152, 80], [102, 189, 99], [166, 217, 106], [217, 239, 139], [255, 255, 191], [254, 224, 139], [253, 174, 97], [244, 109, 67], [215, 48, 39], [165, 0, 38]].reverse(),
+      plasma: [[13, 8, 135], [84, 2, 163], [139, 10, 165], [185, 50, 137], [219, 92, 104], [244, 136, 73], [254, 188, 43], [240, 249, 33]],
+      turbo: [[48, 18, 59], [65, 68, 189], [41, 173, 215], [52, 240, 149], [184, 249, 70], [252, 186, 78], [246, 96, 50], [165, 23, 14], [122, 4, 3]],
+    };
 
-// Hazard label & metadata
-const HAZARD_META = {
-  'earthquake' : { label: '🌍 Gempa Bumi (PGA)',  color: '#f97316', prefix: 'earthquake_bali_PGA_' },
-  'flood'      : { label: '🌊 Banjir (Kedalaman)', color: '#3b82f6', prefix: 'flood_depth_bali_r'   },
-  'flood_comp' : { label: '🌊 Banjir Kompensasi',  color: '#8b5cf6', prefix: 'flood_depth_bali_rc'  },
-  'tsunami'    : { label: '🌊 Tsunami',             color: '#06b6d4', prefix: 'tsunami_bali'         },
-  'drought_gpm': { label: '🌵 Kekeringan (GPM)',    color: '#f59e0b', prefix: 'drought_bali_gpm_rp'  },
-  'drought_mme': { label: '🌵 Kekeringan (MME)',    color: '#d97706', prefix: 'drought_bali_mme_rp'  },
-};
-
-// ══════════════════════════════════════════════════════════════════
-//  Colormaps
-// ══════════════════════════════════════════════════════════════════
-const COLORMAPS = {
-  jet:     [[0,0,128],[0,0,255],[0,128,255],[0,255,255],[128,255,128],[255,255,0],[255,128,0],[255,0,0],[128,0,0]],
-  viridis: [[68,1,84],[72,40,120],[62,83,160],[52,119,169],[36,148,158],[31,172,135],[73,193,109],[153,213,78],[230,231,62],[253,231,37]],
-  hot:     [[0,0,0],[128,0,0],[255,0,0],[255,128,0],[255,255,0],[255,255,200],[255,255,255]],
-  rdylgn_r:[[0,104,55],[26,152,80],[102,189,99],[166,217,106],[217,239,139],[255,255,191],[254,224,139],[253,174,97],[244,109,67],[215,48,39],[165,0,38]].reverse(),
-  plasma:  [[13,8,135],[84,2,163],[139,10,165],[185,50,137],[219,92,104],[244,136,73],[254,188,43],[240,249,33]],
-  turbo:   [[48,18,59],[65,68,189],[41,173,215],[52,240,149],[184,249,70],[252,186,78],[246,96,50],[165,23,14],[122,4,3]],
-};
-
-function lerp(palette, t) {
-  const n = palette.length - 1;
-  const i = Math.min(Math.floor(t * n), n - 1);
-  const f = t * n - i;
-  const [r1,g1,b1] = palette[i];
-  const [r2,g2,b2] = palette[i+1] || palette[i];
-  return [Math.round(r1+(r2-r1)*f), Math.round(g1+(g2-g1)*f), Math.round(b1+(b2-b1)*f)];
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  MAP
-// ══════════════════════════════════════════════════════════════════
-const map = L.map('map', { center: [-8.4, 115], zoom: 9 });
-const basemaps = {
-  'Dark' : L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'© CartoDB', maxZoom:19 }),
-  'OSM'  : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OSM', maxZoom:19 }),
-  'Esri' : L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'© Esri', maxZoom:19 }),
-};
-basemaps['Dark'].addTo(map);
-L.control.layers(basemaps, {}, { position:'topright' }).addTo(map);
-L.control.scale({ metric:true, imperial:false }).addTo(map);
-
-// ══════════════════════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════════════════════
-let allRecords = [];   // [{filename, public_url}]
-let activeHazard = null;
-let currentLayer = null;
-
-// ══════════════════════════════════════════════════════════════════
-//  UI helpers
-// ══════════════════════════════════════════════════════════════════
-const $ = id => document.getElementById(id);
-function setStatus(msg, cls='') { const el=$('status'); el.textContent=msg; el.className=cls; }
-function spin(on, label='Memuat COG…') { $('spinner').classList.toggle('active',on); $('spin-label').textContent=label; }
-
-$('opacity').addEventListener('input', function() {
-  $('opacity-label').textContent = Math.round(this.value*100)+'%';
-  if (currentLayer) currentLayer.setOpacity(+this.value);
-});
-
-// ══════════════════════════════════════════════════════════════════
-//  Fetch metadata dari Supabase REST API
-// ══════════════════════════════════════════════════════════════════
-async function fetchMetadata() {
-  try {
-    const res = await fetch(`${SB_URL}/rest/v1/raster_metadata?select=filename,public_url&order=filename`, {
-      headers: {
-        'apikey': SB_ANONKEY,
-        'Authorization': `Bearer ${SB_ANONKEY}`,
-        'Accept': 'application/json'
-      }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch(e) {
-    // Fallback: coba anon key dengan service role kalau gagal
-    throw e;
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Parse bencana dari filename
-// ══════════════════════════════════════════════════════════════════
-function detectHazard(filename) {
-  const f = filename.toLowerCase().replace('cog_','');
-  if (f.startsWith('earthquake')) return 'earthquake';
-  if (f.startsWith('flood_depth') && f.includes('_rc')) return 'flood_comp';
-  if (f.startsWith('flood_depth')) return 'flood';
-  if (f.startsWith('tsunami')) return 'tsunami';
-  if (f.startsWith('drought') && f.includes('gpm')) return 'drought_gpm';
-  if (f.startsWith('drought') && f.includes('mme')) return 'drought_mme';
-  return null;
-}
-
-// Ekstrak angka return period dari filename
-function extractRP(filename) {
-  const m = filename.match(/(\d+)(?:\.tif)?$/i);
-  return m ? parseInt(m[1]) : null;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Build chips & dropdown
-// ══════════════════════════════════════════════════════════════════
-function buildHazardChips(records) {
-  const found = new Set(records.map(r => detectHazard(r.filename)).filter(Boolean));
-  const container = $('hazard-chips');
-  container.innerHTML = '';
-
-  found.forEach(key => {
-    const meta = HAZARD_META[key];
-    if (!meta) return;
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.textContent = meta.label;
-    chip.dataset.key = key;
-    chip.onclick = () => selectHazard(key);
-    container.appendChild(chip);
-  });
-}
-
-function selectHazard(key) {
-  activeHazard = key;
-  // Update chips
-  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.key === key));
-
-  // Filter records untuk hazard ini
-  const filtered = allRecords.filter(r => detectHazard(r.filename) === key);
-  const meta = HAZARD_META[key];
-
-  const sel = $('sel-rp');
-  sel.innerHTML = '';
-  sel.disabled = false;
-
-  if (key === 'tsunami') {
-    // Tsunami tidak punya return period
-    sel.innerHTML = '<option value="SINGLE">Tidak ada return period (single layer)</option>';
-  } else {
-    const rps = filtered
-      .map(r => extractRP(r.filename))
-      .filter(v => v !== null)
-      .sort((a,b) => a-b);
-
-    rps.forEach(rp => {
-      const opt = document.createElement('option');
-      opt.value = rp;
-      opt.textContent = `${meta.prefix ? 'T' : 'T'}-${rp} tahun`;
-      sel.appendChild(opt);
-    });
-  }
-
-  $('load-btn').disabled = false;
-  setStatus(`Hazard: ${meta.label}\nPilih return period lalu klik "Tampilkan Layer".`,'');
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Resolve URL dari pilihan user
-// ══════════════════════════════════════════════════════════════════
-function resolveURL() {
-  if (!activeHazard) return null;
-  const rp = $('sel-rp').value;
-  if (!rp) return null;
-
-  let rec;
-  if (rp === 'SINGLE') {
-    rec = allRecords.find(r => detectHazard(r.filename) === activeHazard);
-  } else {
-    const rpNum = parseInt(rp);
-    rec = allRecords.find(r => detectHazard(r.filename) === activeHazard && extractRP(r.filename) === rpNum);
-  }
-  return rec ? rec.public_url : null;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Remove COG layer
-// ══════════════════════════════════════════════════════════════════
-function removeCOG() {
-  if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
-  $('legend-wrap').style.display = 'none';
-  $('info-box').style.display = 'none';
-  setStatus('Layer dihapus.', '');
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Load COG
-// ══════════════════════════════════════════════════════════════════
-async function loadSelectedCOG() {
-  const url = resolveURL();
-  if (!url) { setStatus('⚠️ Pilih hazard dan return period terlebih dahulu.', 'err'); return; }
-
-  removeCOG();
-  $('load-btn').disabled = true;
-  spin(true, 'Mengambil COG dari Supabase…');
-  setStatus(`⏳ Mengambil:\n${url.split('/').pop()}`, 'loading');
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-
-    const size = +res.headers.get('content-length') || 0;
-
-    spin(true, 'Parsing GeoRaster…');
-    setStatus('⏳ Parsing GeoRaster…', 'loading');
-    const buf = await res.arrayBuffer();
-    const georaster = await parseGeoraster(buf);
-
-    const minIn  = parseFloat($('val-min').value);
-    const maxIn  = parseFloat($('val-max').value);
-    const rMin   = isNaN(minIn) ? georaster.mins[0] : minIn;
-    const rMax   = isNaN(maxIn) ? georaster.maxs[0] : maxIn;
-    const palette = COLORMAPS[$('colormap').value] || COLORMAPS.jet;
-    const opacity = +$('opacity').value;
-    const nodata  = georaster.noDataValue;
-
-    spin(true, 'Rendering layer…');
-    setStatus('⏳ Rendering layer…', 'loading');
-
-    // Robust class detection
-    const LayerClass = (typeof GeoRasterLayer !== 'undefined')   ? GeoRasterLayer
-                     : (typeof L.GeoRasterLayer !== 'undefined') ? L.GeoRasterLayer
-                     : null;
-    if (!LayerClass) throw new Error('Library GeoRasterLayer tidak ditemukan. Coba refresh dengan Ctrl+Shift+R.');
-
-    currentLayer = new LayerClass({
-      georaster, opacity, resolution: 256,
-      pixelValuesToColorFn: vals => {
-        const v = vals[0];
-        if (v === null || v === undefined || v === nodata || isNaN(v) || v < rMin || v > rMax) return null;
-        const t = Math.max(0, Math.min(1, (v - rMin) / (rMax - rMin)));
-        const [r,g,b] = lerp(palette, t);
-        return `rgba(${r},${g},${b},${opacity})`;
-      }
-    });
-
-    currentLayer.addTo(map);
-    map.fitBounds(currentLayer.getBounds());
-
-    // Legend
-    const stops = palette.map((c,i) => `rgb(${c}) ${(i/(palette.length-1)*100).toFixed(1)}%`).join(',');
-    $('legend-bar').style.background = `linear-gradient(to right,${palette.map((c,i)=>`rgb(${c[0]},${c[1]},${c[2]}) ${(i/(palette.length-1)*100).toFixed(1)}%`).join(',')})`;
-    $('leg-min').textContent = rMin?.toFixed(4) ?? '—';
-    $('leg-max').textContent = rMax?.toFixed(4) ?? '—';
-    $('legend-wrap').style.display = 'block';
-
-    // Info Box
-    $('inf-name').textContent  = url.split('/').pop();
-    $('inf-size').textContent  = size ? (size/1024/1024).toFixed(2)+' MB' : '—';
-    $('inf-range').textContent = `${georaster.mins[0]?.toFixed(4)} → ${georaster.maxs[0]?.toFixed(4)}`;
-    $('inf-nd').textContent    = nodata ?? '—';
-    $('info-box').style.display = 'block';
-
-    setStatus(`✅ Layer berhasil dimuat!\n${url.split('/').pop()}`, 'ok');
-  } catch(err) {
-    console.error(err);
-    setStatus(`❌ Gagal: ${err.message}`, 'err');
-  } finally {
-    $('load-btn').disabled = false;
-    spin(false);
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  Popup klik peta
-// ══════════════════════════════════════════════════════════════════
-map.on('click', async e => {
-  if (!currentLayer?.georaster) return;
-  try {
-    const vals = await currentLayer.georaster.getValues({ left:e.latlng.lng, bottom:e.latlng.lat, right:e.latlng.lng, top:e.latlng.lat, width:1, height:1 });
-    const v = vals?.[0]?.[0]?.[0];
-    if (v !== undefined && v !== null) {
-      L.popup()
-        .setLatLng(e.latlng)
-        .setContent(`<b>Nilai:</b> ${v?.toFixed ? v.toFixed(6) : v}<br><small style="color:#64748b">${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}</small>`)
-        .openOn(map);
+    function lerp(palette, t) {
+      const n = palette.length - 1;
+      const i = Math.min(Math.floor(t * n), n - 1);
+      const f = t * n - i;
+      const [r1, g1, b1] = palette[i];
+      const [r2, g2, b2] = palette[i + 1] || palette[i];
+      return [Math.round(r1 + (r2 - r1) * f), Math.round(g1 + (g2 - g1) * f), Math.round(b1 + (b2 - b1) * f)];
     }
-  } catch(_) {}
-});
 
-// ══════════════════════════════════════════════════════════════════
-//  INIT — Fetch data dari Supabase
-// ══════════════════════════════════════════════════════════════════
-(async () => {
-  const dot   = $('conn-dot');
-  const label = $('conn-label');
+    // ══════════════════════════════════════════════════════════════════
+    //  MAP
+    // ══════════════════════════════════════════════════════════════════
+    const map = L.map('map', { center: [-8.4, 115], zoom: 9 });
+    const basemaps = {
+      'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19 }),
+      'OSM': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 }),
+      'Esri': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 }),
+    };
+    basemaps['Dark'].addTo(map);
+    L.control.layers(basemaps, {}, { position: 'topright' }).addTo(map);
+    L.control.scale({ metric: true, imperial: false }).addTo(map);
 
-  try {
-    label.textContent = 'Menghubungkan ke Supabase…';
-    allRecords = await fetchMetadata();
+    // ══════════════════════════════════════════════════════════════════
+    //  STATE
+    // ══════════════════════════════════════════════════════════════════
+    let allRecords = [];   // [{filename, public_url}]
+    let activeHazard = null;
+    let currentLayer = null;
 
-    dot.classList.add('connected');
-    label.textContent = `Supabase — ${allRecords.length} layer tersedia`;
+    // ══════════════════════════════════════════════════════════════════
+    //  UI helpers
+    // ══════════════════════════════════════════════════════════════════
+    const $ = id => document.getElementById(id);
+    function setStatus(msg, cls = '') { const el = $('status'); el.textContent = msg; el.className = cls; }
+    function spin(on, label = 'Memuat COG…') { $('spinner').classList.toggle('active', on); $('spin-label').textContent = label; }
 
-    buildHazardChips(allRecords);
-    setStatus('Pilih jenis bencana di atas, lalu pilih return period.');
-  } catch(e) {
-    dot.style.background = '#f87171';
-    label.textContent = 'Gagal terhubung ke Supabase';
-    $('hazard-chips').innerHTML = `<span style="font-size:12px;color:#f87171;">❌ ${e.message}</span>`;
-    setStatus('❌ Tidak dapat memuat data dari Supabase.\nCek console untuk detail.', 'err');
-    console.error(e);
-  }
-})();
-</script>
+    $('opacity').addEventListener('input', function () {
+      $('opacity-label').textContent = Math.round(this.value * 100) + '%';
+      if (currentLayer) currentLayer.setOpacity(+this.value);
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Fetch metadata dari Supabase REST API
+    // ══════════════════════════════════════════════════════════════════
+    async function fetchMetadata() {
+      try {
+        const res = await fetch(`${SB_URL}/rest/v1/raster_metadata?select=filename,public_url&order=filename`, {
+          headers: {
+            'apikey': SB_ANONKEY,
+            'Authorization': `Bearer ${SB_ANONKEY}`,
+            'Accept': 'application/json'
+          }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        // Fallback: coba anon key dengan service role kalau gagal
+        throw e;
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Parse bencana dari filename
+    // ══════════════════════════════════════════════════════════════════
+    function detectHazard(filename) {
+      const f = filename.toLowerCase().replace('cog_', '');
+      if (f.startsWith('earthquake')) return 'earthquake';
+      if (f.startsWith('flood_depth') && f.includes('_rc')) return 'flood_comp';
+      if (f.startsWith('flood_depth')) return 'flood';
+      if (f.startsWith('tsunami')) return 'tsunami';
+      if (f.startsWith('drought') && f.includes('gpm')) return 'drought_gpm';
+      if (f.startsWith('drought') && f.includes('mme')) return 'drought_mme';
+      return null;
+    }
+
+    // Ekstrak angka return period dari filename
+    function extractRP(filename) {
+      const m = filename.match(/(\d+)(?:\.tif)?$/i);
+      return m ? parseInt(m[1]) : null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Build chips & dropdown
+    // ══════════════════════════════════════════════════════════════════
+    function buildHazardChips(records) {
+      const found = new Set(records.map(r => detectHazard(r.filename)).filter(Boolean));
+      const container = $('hazard-chips');
+      container.innerHTML = '';
+
+      found.forEach(key => {
+        const meta = HAZARD_META[key];
+        if (!meta) return;
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = meta.label;
+        chip.dataset.key = key;
+        chip.onclick = () => selectHazard(key);
+        container.appendChild(chip);
+      });
+    }
+
+    function selectHazard(key) {
+      activeHazard = key;
+      // Update chips
+      document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.key === key));
+
+      // Filter records untuk hazard ini
+      const filtered = allRecords.filter(r => detectHazard(r.filename) === key);
+      const meta = HAZARD_META[key];
+
+      const sel = $('sel-rp');
+      sel.innerHTML = '';
+      sel.disabled = false;
+
+      if (key === 'tsunami') {
+        // Tsunami tidak punya return period
+        sel.innerHTML = '<option value="SINGLE">Tidak ada return period (single layer)</option>';
+      } else {
+        const rps = filtered
+          .map(r => extractRP(r.filename))
+          .filter(v => v !== null)
+          .sort((a, b) => a - b);
+
+        rps.forEach(rp => {
+          const opt = document.createElement('option');
+          opt.value = rp;
+          opt.textContent = `${meta.prefix ? 'T' : 'T'}-${rp} tahun`;
+          sel.appendChild(opt);
+        });
+      }
+
+      $('load-btn').disabled = false;
+      setStatus(`Hazard: ${meta.label}\nPilih return period lalu klik "Tampilkan Layer".`, '');
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Resolve URL dari pilihan user
+    // ══════════════════════════════════════════════════════════════════
+    function resolveURL() {
+      if (!activeHazard) return null;
+      const rp = $('sel-rp').value;
+      if (!rp) return null;
+
+      let rec;
+      if (rp === 'SINGLE') {
+        rec = allRecords.find(r => detectHazard(r.filename) === activeHazard);
+      } else {
+        const rpNum = parseInt(rp);
+        rec = allRecords.find(r => detectHazard(r.filename) === activeHazard && extractRP(r.filename) === rpNum);
+      }
+      return rec ? rec.public_url : null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Remove COG layer
+    // ══════════════════════════════════════════════════════════════════
+    function removeCOG() {
+      if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
+      $('legend-wrap').style.display = 'none';
+      $('info-box').style.display = 'none';
+      setStatus('Layer dihapus.', '');
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Load COG
+    // ══════════════════════════════════════════════════════════════════
+    async function loadSelectedCOG() {
+      const url = resolveURL();
+      if (!url) { setStatus('⚠️ Pilih hazard dan return period terlebih dahulu.', 'err'); return; }
+
+      removeCOG();
+      $('load-btn').disabled = true;
+      spin(true, 'Mengambil COG dari Supabase…');
+      setStatus(`⏳ Mengambil:\n${url.split('/').pop()}`, 'loading');
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+        const size = +res.headers.get('content-length') || 0;
+
+        spin(true, 'Parsing GeoRaster…');
+        setStatus('⏳ Parsing GeoRaster…', 'loading');
+        const buf = await res.arrayBuffer();
+        const georaster = await parseGeoraster(buf);
+
+        const minIn = parseFloat($('val-min').value);
+        const maxIn = parseFloat($('val-max').value);
+        const rMin = isNaN(minIn) ? georaster.mins[0] : minIn;
+        const rMax = isNaN(maxIn) ? georaster.maxs[0] : maxIn;
+        const palette = COLORMAPS[$('colormap').value] || COLORMAPS.jet;
+        const opacity = +$('opacity').value;
+        const nodata = georaster.noDataValue;
+
+        spin(true, 'Rendering layer…');
+        setStatus('⏳ Rendering layer…', 'loading');
+
+        // Robust class detection
+        const LayerClass = (typeof GeoRasterLayer !== 'undefined') ? GeoRasterLayer
+          : (typeof L.GeoRasterLayer !== 'undefined') ? L.GeoRasterLayer
+            : null;
+        if (!LayerClass) throw new Error('Library GeoRasterLayer tidak ditemukan. Coba refresh dengan Ctrl+Shift+R.');
+
+        currentLayer = new LayerClass({
+          georaster, opacity, resolution: 256,
+          pixelValuesToColorFn: vals => {
+            const v = vals[0];
+            if (v === null || v === undefined || v === nodata || isNaN(v) || v < rMin || v > rMax) return null;
+            const t = Math.max(0, Math.min(1, (v - rMin) / (rMax - rMin)));
+            const [r, g, b] = lerp(palette, t);
+            return `rgba(${r},${g},${b},${opacity})`;
+          }
+        });
+
+        currentLayer.addTo(map);
+        map.fitBounds(currentLayer.getBounds());
+
+        // Legend
+        const stops = palette.map((c, i) => `rgb(${c}) ${(i / (palette.length - 1) * 100).toFixed(1)}%`).join(',');
+        $('legend-bar').style.background = `linear-gradient(to right,${palette.map((c, i) => `rgb(${c[0]},${c[1]},${c[2]}) ${(i / (palette.length - 1) * 100).toFixed(1)}%`).join(',')})`;
+        $('leg-min').textContent = rMin?.toFixed(4) ?? '—';
+        $('leg-max').textContent = rMax?.toFixed(4) ?? '—';
+        $('legend-wrap').style.display = 'block';
+
+        // Info Box
+        $('inf-name').textContent = url.split('/').pop();
+        $('inf-size').textContent = size ? (size / 1024 / 1024).toFixed(2) + ' MB' : '—';
+        $('inf-range').textContent = `${georaster.mins[0]?.toFixed(4)} → ${georaster.maxs[0]?.toFixed(4)}`;
+        $('inf-nd').textContent = nodata ?? '—';
+        $('info-box').style.display = 'block';
+
+        setStatus(`✅ Layer berhasil dimuat!\n${url.split('/').pop()}`, 'ok');
+      } catch (err) {
+        console.error(err);
+        setStatus(`❌ Gagal: ${err.message}`, 'err');
+      } finally {
+        $('load-btn').disabled = false;
+        spin(false);
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Popup klik peta
+    // ══════════════════════════════════════════════════════════════════
+    map.on('click', async e => {
+      if (!currentLayer?.georaster) return;
+      try {
+        const vals = await currentLayer.georaster.getValues({ left: e.latlng.lng, bottom: e.latlng.lat, right: e.latlng.lng, top: e.latlng.lat, width: 1, height: 1 });
+        const v = vals?.[0]?.[0]?.[0];
+        if (v !== undefined && v !== null) {
+          L.popup()
+            .setLatLng(e.latlng)
+            .setContent(`<b>Nilai:</b> ${v?.toFixed ? v.toFixed(6) : v}<br><small style="color:#64748b">${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}</small>`)
+            .openOn(map);
+        }
+      } catch (_) { }
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  INIT — Fetch data dari Supabase
+    // ══════════════════════════════════════════════════════════════════
+    (async () => {
+      const dot = $('conn-dot');
+      const label = $('conn-label');
+
+      try {
+        label.textContent = 'Menghubungkan ke Supabase…';
+        allRecords = await fetchMetadata();
+
+        dot.classList.add('connected');
+        label.textContent = `Supabase — ${allRecords.length} layer tersedia`;
+
+        buildHazardChips(allRecords);
+        setStatus('Pilih jenis bencana di atas, lalu pilih return period.');
+      } catch (e) {
+        dot.style.background = '#f87171';
+        label.textContent = 'Gagal terhubung ke Supabase';
+        $('hazard-chips').innerHTML = `<span style="font-size:12px;color:#f87171;">❌ ${e.message}</span>`;
+        setStatus('❌ Tidak dapat memuat data dari Supabase.\nCek console untuk detail.', 'err');
+        console.error(e);
+      }
+    })();
+  </script>
 </body>
+
 </html>

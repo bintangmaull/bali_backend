@@ -53,11 +53,11 @@ class GedungRepository:
           'features', COALESCE(json_agg(f), '[]'::json)
         ) AS geojson
         FROM (
+          -- Original Bangunan
           SELECT json_build_object(
             'type', 'Feature',
             'geometry', ST_AsGeoJSON(b.geom)::json,
             'properties',
-              -- drop geom, provinsi, kota then re-add non-null
               (to_jsonb(b)
                  - 'geom'
                  - 'provinsi'
@@ -66,6 +66,7 @@ class GedungRepository:
               || jsonb_build_object(
                    'provinsi', COALESCE(b.provinsi, ''),
                    'kota',    COALESCE(b.kota, ''),
+                   'id_bangunan', b.id_bangunan,
                    'hsbgn',   CASE WHEN b.jumlah_lantai = 1 THEN k.hsbgn_sederhana ELSE k.hsbgn_tidaksederhana END
                  )
               || to_jsonb(d)
@@ -74,6 +75,35 @@ class GedungRepository:
           JOIN hasil_proses_directloss d USING(id_bangunan)
           LEFT JOIN kota k ON TRIM(LOWER(k.kota)) = TRIM(LOWER(b.kota))
           WHERE {" AND ".join(where)}
+          
+          UNION ALL
+          
+          -- BMN and Residential
+          SELECT json_build_object(
+            'type', 'Feature',
+            'geometry', ST_AsGeoJSON(b.geom)::json,
+            'properties',
+              (to_jsonb(b)
+                 - 'geom'
+                 - 'provinsi'
+                 - 'kota'
+                 - 'id'
+              )
+              || jsonb_build_object(
+                   'id_bangunan', b.id,
+                   'provinsi', COALESCE(b.provinsi, ''),
+                   'kota',    COALESCE(b.kota, '')
+                 )
+              -- fill direct loss columns with 0 since they don't have calculations yet
+              || '{{
+                "direct_loss_pga_100": 0, "direct_loss_pga_200": 0, "direct_loss_pga_250": 0, "direct_loss_pga_500": 0, "direct_loss_pga_1000": 0,
+                "direct_loss_inundansi": 0,
+                "direct_loss_r_2": 0, "direct_loss_r_5": 0, "direct_loss_r_10": 0, "direct_loss_r_25": 0, "direct_loss_r_50": 0, "direct_loss_r_100": 0, "direct_loss_r_250": 0,
+                "direct_loss_rc_2": 0, "direct_loss_rc_5": 0, "direct_loss_rc_10": 0, "direct_loss_rc_25": 0, "direct_loss_rc_50": 0, "direct_loss_rc_100": 0, "direct_loss_rc_250": 0
+              }}'::jsonb
+          ) AS f
+          FROM exposure_bmn_residential b
+          WHERE {" AND ".join(where).replace("b.id_bangunan", "b.id")}
           {limit_clause}
         ) sub;
         """
@@ -230,21 +260,58 @@ class GedungRepository:
     @staticmethod
     def fetch_rekap_aset_kota_geojson():
         sql = """
-        SELECT json_build_object(
-          'type',     'FeatureCollection',
-          'features', COALESCE(json_agg(f), '[]'::json)
-        ) AS geojson
-        FROM (
-          SELECT json_build_object(
-            'type',     'Feature',
-            'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.01))::json,
-            'properties', to_jsonb(rak)
-          ) AS f
-          FROM rekap_aset_kota rak
-          JOIN kota k
-            ON lower(k.kota) = lower(rak.id_kota)
-        ) sub;
+        SELECT 
+            p.id_provinsi as id_prov, 
+            r.id_kota as nama_kota,
+            ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.005))::json as geom_geojson,
+            to_jsonb(r) as r_props
+        FROM rekap_aset_kota r
+        LEFT JOIN kota k ON TRIM(LOWER(r.id_kota)) = TRIM(LOWER(k.kota))
+        LEFT JOIN provinsi p ON TRIM(LOWER(k.provinsi)) = TRIM(LOWER(p.provinsi))
         """
-        logger.debug("fetch_rekap_aset_kota_geojson SQL:\n%s", sql)
-        return db.session.execute(text(sql)).scalar()
+        rekapData = db.session.execute(text(sql)).fetchall()
 
+        prov_ratios = {}
+        city_count = 0
+        
+        features = []
+        for row in rekapData:
+            r_props = row[3] or {}
+            dl_exp = r_props.get('dl_exposure', {})
+            if isinstance(dl_exp, str):
+                try:
+                    dl_exp = json.loads(dl_exp)
+                except:
+                    dl_exp = {}
+            
+            # Update r_props with the correctly parsed dl_exposure and extra fields
+            r_props['dl_exposure'] = dl_exp
+            r_props['id_prov'] = row[0]
+            r_props['nama_kota'] = row[1]
+            r_props['is_gempa_ratio'] = True
+
+            features.append({
+                'type': 'Feature',
+                'geometry': row[2],
+                'properties': r_props
+            })
+            
+            city_count += 1
+            for cat, rps in dl_exp.items():
+                if not isinstance(rps, dict): continue
+                if cat not in prov_ratios:
+                    prov_ratios[cat] = {}
+                for rp, val in rps.items():
+                    if rp.startswith('pga_'):
+                        prov_ratios[cat][rp] = prov_ratios[cat].get(rp, 0) + (float(val) if val is not None else 0)
+
+        if city_count > 0:
+            for cat in prov_ratios:
+                for rp in prov_ratios[cat]:
+                    prov_ratios[cat][rp] = prov_ratios[cat][rp] / city_count
+
+        return {
+            'type': 'FeatureCollection',
+            'features': features,
+            'provincial_gempa_loss_ratios': prov_ratios
+        }
