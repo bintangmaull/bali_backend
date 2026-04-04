@@ -45,10 +45,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # UBAH CORS: Mengambil origin dari environment variable (untuk Vercel)
-    # Jika tidak ada di env, defaultnya mengizinkan semua ("*") agar aman saat awal deploy
-    frontend_url = os.environ.get("FRONTEND_URL", "*")
-    CORS(app, origins=[frontend_url, "http://localhost:3000"])
+    # Handle CORS
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
     # ensure upload folder
     upload_folder = app.config.get('UPLOAD_FOLDER',
