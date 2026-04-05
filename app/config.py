@@ -7,24 +7,25 @@ class Config:
 
 
 
-    DB_USER = os.getenv('DB_USER', 'postgres.btwsqklqtqgrlmvysgsc')
+    DB_USER = os.getenv('DB_USER', 'aal-db')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '@Guyengan123')
-    DB_HOST = os.getenv('DB_HOST', 'aws-1-ap-northeast-1.pooler.supabase.com')
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = os.getenv('DB_PORT', '5432')
-    DB_NAME = os.getenv('DB_NAME', 'postgres')
+    DB_NAME = os.getenv('DB_NAME', 'aal-db')
 
     # URL Encoding password agar karakter spesial (@, :, /, dll) aman digunakan
     safe_password = quote_plus(DB_PASSWORD)
 
-    # Konfigurasi URI dengan SSL mode
+    # Base URI Database
     if DB_PASSWORD:
-        SQLALCHEMY_DATABASE_URI = (
-            f'postgresql://{DB_USER}:{safe_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require'
-        )
+        SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{safe_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     else:
-        SQLALCHEMY_DATABASE_URI = (
-            f'postgresql://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require'
-        )
+        SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+
+    # Tambahkan sslmode=require HANYA jika host-nya adalah Supabase (Cloud)
+    # Jika menggunakan VPS sendiri (Dokploy), tidak perlu SSL karena jalurnya internal Docker
+    if "supabase" in DB_HOST.lower():
+        SQLALCHEMY_DATABASE_URI += "?sslmode=require"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
