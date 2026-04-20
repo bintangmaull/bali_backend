@@ -491,13 +491,85 @@ class LossDroughtSawah(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     kota = db.Column(db.String(255), nullable=False)
     return_period = db.Column(db.Integer, nullable=False)
-    climate_change = db.Column(db.String(10), nullable=False)  # 'gpm' or 'mme'
+    climate_change = db.Column(db.String(10), nullable=False)  # 'ncc' or 'cc'
     loss_2022_idr = db.Column(db.Float)
     loss_2025_idr = db.Column(db.Float)
     loss_2028_idr = db.Column(db.Float)
     loss_2022_usd = db.Column(db.Float)
     loss_2025_usd = db.Column(db.Float)
     loss_2028_usd = db.Column(db.Float)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+class AALDroughtSawah(db.Model):
+    """Drought (Kekeringan) rice field AAL values from CSV."""
+    __tablename__ = 'aal_drought_sawah'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    year = db.Column(db.Integer, nullable=False)
+    climate_change = db.Column(db.String(10), nullable=False) # 'ncc' or 'cc'
+    id_kota = db.Column(db.String(100), nullable=False)
+    province_name = db.Column(db.String(100))
+    cv = db.Column(db.Float)
+    aal = db.Column(db.Float)
+    var_95 = db.Column(db.Float)
+    tvar_95 = db.Column(db.Float)
+    var_99 = db.Column(db.Float)
+    tvar_99 = db.Column(db.Float)
+    pml_25 = db.Column(db.Float)
+    pml_50 = db.Column(db.Float)
+    pml_100 = db.Column(db.Float)
+    pml_250 = db.Column(db.Float)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+
+class AALFloodSawah(db.Model):
+    """Flood (Banjir) rice field AAL and PML values from CSV, per kota/year/CC scenario."""
+    __tablename__ = 'aal_flood_sawah'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    year = db.Column(db.Integer, nullable=False)               # 2022, 2025, 2028
+    climate_change = db.Column(db.String(10), nullable=False)  # 'ncc' or 'cc'
+    kota = db.Column(db.String(100), nullable=False)
+    aal   = db.Column(db.Float)
+    pml_10  = db.Column(db.Float)
+    tvar_10 = db.Column(db.Float)
+    pml_25  = db.Column(db.Float)
+    tvar_25 = db.Column(db.Float)
+    pml_50  = db.Column(db.Float)
+    tvar_50 = db.Column(db.Float)
+    pml_100 = db.Column(db.Float)
+    tvar_100 = db.Column(db.Float)
+    pml_250 = db.Column(db.Float)
+    tvar_250 = db.Column(db.Float)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+
+class AALFloodSawahSkema2(db.Model):
+    """Flood (Banjir) rice field AAL and PML values for Skema 2 (7 Return Periods)."""
+    __tablename__ = 'aal_flood_sawah_skema2'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    year = db.Column(db.Integer, nullable=False)               # 2022, 2025, 2028
+    climate_change = db.Column(db.String(10), nullable=False)  # 'ncc' or 'cc'
+    kota = db.Column(db.String(100), nullable=False)
+    aal   = db.Column(db.Float)
+    pml_2   = db.Column(db.Float, default=0)
+    tvar_2  = db.Column(db.Float, default=0)
+    pml_5   = db.Column(db.Float, default=0)
+    tvar_5  = db.Column(db.Float, default=0)
+    pml_10  = db.Column(db.Float, default=0)
+    tvar_10 = db.Column(db.Float, default=0)
+    pml_25  = db.Column(db.Float, default=0)
+    tvar_25 = db.Column(db.Float, default=0)
+    pml_50  = db.Column(db.Float, default=0)
+    tvar_50 = db.Column(db.Float, default=0)
+    pml_100 = db.Column(db.Float, default=0)
+    tvar_100 = db.Column(db.Float, default=0)
+    pml_250 = db.Column(db.Float, default=0)
+    tvar_250 = db.Column(db.Float, default=0)
 
     def to_dict(self):
         return {col.name: getattr(self, col.name) for col in self.__table__.columns}

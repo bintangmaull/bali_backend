@@ -49,3 +49,11 @@ class GedungService:
     def get_rekap_aset_kota_geojson():
         return GedungRepository.fetch_rekap_aset_kota_geojson()
 
+    @staticmethod
+    def get_aal_drought_geojson(year=None, cc=None):
+        return GedungRepository.fetch_aal_drought_geojson(year=year, cc=cc)
+
+    @staticmethod
+    def get_aal_flood_sawah_geojson(year=None, cc=None):
+        return GedungRepository.fetch_aal_flood_sawah_geojson(year=year, cc=cc)
+

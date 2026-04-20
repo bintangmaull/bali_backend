@@ -225,6 +225,14 @@ class GedungRepository:
     @staticmethod
     def fetch_aal_kota_geojson():
         sql = """
+        WITH drought_agg AS (
+            SELECT 
+                id_kota,
+                SUM(aal) as aal_drought
+            FROM aal_drought_sawah
+            WHERE year = 2022 AND climate_change = 'ncc'
+            GROUP BY id_kota
+        )
         SELECT json_build_object(
           'type',     'FeatureCollection',
           'features', COALESCE(json_agg(f), '[]'::json)
@@ -233,15 +241,75 @@ class GedungRepository:
           SELECT json_build_object(
             'type',     'Feature',
             'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.01))::json,
-            'properties', to_jsonb(hak)
+            'properties', to_jsonb(hak) || jsonb_build_object('aal_drought_total', COALESCE(da.aal_drought, 0))
           ) AS f
           FROM hasil_aal_kota hak
-          JOIN kota k
-            ON lower(k.kota) = lower(hak.id_kota)
+          JOIN kota k ON lower(k.kota) = lower(hak.id_kota)
+          LEFT JOIN drought_agg da ON lower(da.id_kota) = lower(hak.id_kota)
         ) sub;
         """
         logger.debug("fetch_aal_kota_geojson SQL:\n%s", sql)
         return db.session.execute(text(sql)).scalar()
+
+    @staticmethod
+    def fetch_aal_drought_geojson(year=None, cc=None):
+        where = ["1=1"]
+        params = {}
+        if year:
+            where.append("year = :year")
+            params['year'] = int(year)
+        if cc:
+            where.append("climate_change = :cc")
+            params['cc'] = cc.lower()
+
+        sql = f"""
+        SELECT json_build_object(
+          'type',     'FeatureCollection',
+          'features', COALESCE(json_agg(f), '[]'::json)
+        ) AS geojson
+        FROM (
+          SELECT json_build_object(
+            'type',     'Feature',
+            'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.01))::json,
+            'properties', to_jsonb(ads)
+          ) AS f
+          FROM aal_drought_sawah ads
+          JOIN kota k ON lower(k.kota) = lower(ads.id_kota)
+          WHERE {" AND ".join(where)}
+        ) sub;
+        """
+        logger.debug("fetch_aal_drought_geojson SQL:\n%s | params: %s", sql, params)
+        return db.session.execute(text(sql), params).scalar()
+
+    @staticmethod
+    def fetch_aal_flood_sawah_geojson(year=None, cc=None):
+        where = ["1=1"]
+        params = {}
+        if year:
+            where.append("year = :year")
+            params['year'] = int(year)
+        if cc:
+            where.append("climate_change = :cc")
+            params['cc'] = cc.lower()
+
+        sql = f"""
+        SELECT json_build_object(
+          'type',     'FeatureCollection',
+          'features', COALESCE(json_agg(f), '[]'::json)
+        ) AS geojson
+        FROM (
+          SELECT json_build_object(
+            'type',     'Feature',
+            'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.01))::json,
+            'properties', to_jsonb(afs)
+          ) AS f
+          FROM aal_flood_sawah afs
+          JOIN kota k ON lower(k.kota) = lower(afs.kota)
+          WHERE {" AND ".join(where)}
+        ) sub;
+        """
+        logger.debug("fetch_aal_flood_sawah_geojson SQL:\n%s | params: %s", sql, params)
+        return db.session.execute(text(sql), params).scalar()
 
     @staticmethod
     def stream_aal_kota_csv():

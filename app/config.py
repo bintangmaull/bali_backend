@@ -1,52 +1,46 @@
 import os
 from datetime import timedelta
 from urllib.parse import quote_plus
+from dotenv import load_dotenv
+
+# Load environment variables dari file .env di root folder
+load_dotenv()
 
 class Config:
-    """Konfigurasi Flask untuk Supabase"""
+    """Konfigurasi Flask untuk VPS Database"""
 
-
-
+    # Mengambil dari environment variable, dengan default ke VPS detail
     DB_USER = os.getenv('DB_USER', 'aal-db')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', '@Guyengan123')
-    DB_HOST = os.getenv('DB_HOST', 'localhost')
-    DB_PORT = os.getenv('DB_PORT', '5432')
-    DB_NAME = os.getenv('DB_NAME', 'aal-db')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', '123456')
+    DB_HOST = os.getenv('DB_HOST', '72.60.76.178')
+    DB_PORT = os.getenv('DB_PORT', '5433')
+    DB_NAME = os.getenv('DB_NAME', 'aal_db')
 
-    # URL Encoding password agar karakter spesial (@, :, /, dll) aman digunakan
+    # URL Encoding password agar karakter spesial aman digunakan
     safe_password = quote_plus(DB_PASSWORD)
 
     # Base URI Database
-    if DB_PASSWORD:
-        SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{safe_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-    else:
-        SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-
-    # Tambahkan sslmode=require HANYA jika host-nya adalah Supabase (Cloud)
-    # Jika menggunakan VPS sendiri (Dokploy), tidak perlu SSL karena jalurnya internal Docker
-    if "supabase" in DB_HOST.lower():
-        SQLALCHEMY_DATABASE_URI += "?sslmode=require"
+    SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{safe_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Konfigurasi Pool SQLAlchemy untuk Supabase PgBouncer (Transaction Mode)
-    # Ini mencegah error "server closed the connection unexpectedly"
+    # Konfigurasi Pool SQLAlchemy yang optimal untuk VPS
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,        # Cek koneksi sebelum digunakan (menghindari error server closed)
-        "pool_recycle": 300,          # Recycle koneksi setiap 5 menit sebelum Supabase mematikannya
-        "pool_timeout": 30,           # Waktu tunggu maksimal untuk mendapatkan koneksi dari pool (detik)
-        "pool_size": 10,              # Jumlah koneksi permanen di pool
-        "max_overflow": 15            # Ekstra koneksi jika pool penuh
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "pool_timeout": 30,
+        "pool_size": 20,
+        "max_overflow": 10
     }
 
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(BASE_DIR, 'uploads'))
 
-    DEBUG = os.getenv('DEBUG', 'False').lower() in ['true', '1', 't']
+    DEBUG = os.getenv('DEBUG', 'True').lower() in ['true', '1', 't']
 
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'cardinal-aal-super-secret-key-2024')
-    # Token expires in 7 days — MUST be timedelta, not raw int
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'D3ployment2026!AAL')
+    # Token expires in 7 days
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 
     if not os.path.exists(UPLOAD_FOLDER):
