@@ -467,6 +467,18 @@ class ActivityLog(db.Model):
     detail      = db.Column(db.Text, nullable=True)
     timestamp   = db.Column(db.DateTime, server_default=db.func.now())
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_nama': self.user_nama,
+            'user_email': self.user_email,
+            'action': self.action,
+            'target': self.target,
+            'target_id': self.target_id,
+            'detail': self.detail,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+        }
+
 class LossRatioGempa(db.Model):
     __tablename__ = 'loss_ratio_gempa'
 
