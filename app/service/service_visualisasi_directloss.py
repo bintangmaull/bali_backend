@@ -38,8 +38,8 @@ class GedungService:
     # ————————————————
     # Service AAL per Kota
     @staticmethod
-    def get_aal_kota_geojson():
-        return GedungRepository.fetch_aal_kota_geojson()
+    def get_aal_kota_geojson(cv='0.15', scheme='1'):
+        return GedungRepository.fetch_aal_kota_geojson(cv=cv, scheme=scheme)
 
     @staticmethod
     def get_aal_kota_csv():
@@ -56,4 +56,12 @@ class GedungService:
     @staticmethod
     def get_aal_flood_sawah_geojson(year=None, cc=None):
         return GedungRepository.fetch_aal_flood_sawah_geojson(year=year, cc=cc)
+
+    @staticmethod
+    def get_aal_flood_building(kota=None, cv=None):
+        return GedungRepository.fetch_aal_flood_building(kota=kota, cv=cv)
+
+    @staticmethod
+    def get_aal_flood_building_skema2(kota=None):
+        return GedungRepository.fetch_aal_flood_building_skema2(kota=kota)
 

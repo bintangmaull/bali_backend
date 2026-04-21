@@ -573,3 +573,44 @@ class AALFloodSawahSkema2(db.Model):
 
     def to_dict(self):
         return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+
+class AALFloodBuilding(db.Model):
+    """Flood (Banjir) building AAL and PML values from CSV, per exposure/kota/CC scenario (Skema 1)."""
+    __tablename__ = 'aal_flood_building'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exposure = db.Column(db.String(100), nullable=False)
+    climate_change = db.Column(db.String(100), nullable=False)
+    id_kota = db.Column(db.String(100), nullable=False)
+    cv = db.Column(db.Float)
+    aal = db.Column(db.Float)
+    var_95 = db.Column(db.Float)
+    tvar_95 = db.Column(db.Float)
+    var_99 = db.Column(db.Float)
+    tvar_99 = db.Column(db.Float)
+    pml_25 = db.Column(db.Float)
+    pml_50 = db.Column(db.Float)
+    pml_100 = db.Column(db.Float)
+    pml_250 = db.Column(db.Float)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+class AALFloodBuildingSkema2(db.Model):
+    """Flood (Banjir) building AAL and PML values for Skema 2 (7 Return Periods)."""
+    __tablename__ = 'aal_flood_building_skema2'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    exposure = db.Column(db.String(100), nullable=False)
+    climate_change = db.Column(db.String(100), nullable=False)
+    kota = db.Column(db.String(100), nullable=False)
+    aal = db.Column(db.Float, default=0)
+    pml_2 = db.Column(db.Float, default=0)
+    pml_5 = db.Column(db.Float, default=0)
+    pml_10 = db.Column(db.Float, default=0)
+    pml_25 = db.Column(db.Float, default=0)
+    pml_50 = db.Column(db.Float, default=0)
+    pml_100 = db.Column(db.Float, default=0)
+    pml_250 = db.Column(db.Float, default=0)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}

@@ -223,15 +223,45 @@ class GedungRepository:
         return cur, copy_sql, {}
 
     @staticmethod
-    def fetch_aal_kota_geojson():
-        sql = """
-        WITH drought_agg AS (
+    def fetch_aal_kota_geojson(cv='0.15', scheme='1'):
+        tbl = "aal_flood_building"
+        where_flood = "cv = CAST(:cv AS NUMERIC)"
+        col_id_kota = "id_kota"
+        
+        if scheme == '2':
+            tbl = "aal_flood_building_skema2"
+            # Skema 2 uses 'kota' instead of 'id_kota' column name in models_database (I should check)
+            # Actually I defined it as 'kota' in AALFloodBuildingSkema2
+            col_id_kota = "kota"
+            where_flood = "1=1"
+
+        sql = f"""
+        WITH flood_agg AS (
             SELECT 
-                id_kota,
+                TRIM(LOWER({col_id_kota})) as id_kota_clean,
+                SUM(CASE WHEN lower(climate_change) NOT LIKE '%change%' THEN aal ELSE 0 END) as b_aal_r_total,
+                SUM(CASE WHEN lower(climate_change) LIKE '%change%' THEN aal ELSE 0 END) as b_aal_rc_total,
+                SUM(CASE WHEN lower(exposure) = 'hotel' AND lower(climate_change) NOT LIKE '%change%' THEN aal ELSE 0 END) as b_aal_r_hotel,
+                SUM(CASE WHEN lower(exposure) = 'hotel' AND lower(climate_change) LIKE '%change%' THEN aal ELSE 0 END) as b_aal_rc_hotel,
+                SUM(CASE WHEN lower(exposure) = 'airport' AND lower(climate_change) NOT LIKE '%change%' THEN aal ELSE 0 END) as b_aal_r_airport,
+                SUM(CASE WHEN lower(exposure) = 'airport' AND lower(climate_change) LIKE '%change%' THEN aal ELSE 0 END) as b_aal_rc_airport,
+                SUM(CASE WHEN (lower(exposure) = 'fd' OR lower(exposure) LIKE '%educational%') AND lower(climate_change) NOT LIKE '%change%' THEN aal ELSE 0 END) as b_aal_r_fd,
+                SUM(CASE WHEN (lower(exposure) = 'fd' OR lower(exposure) LIKE '%educational%') AND lower(climate_change) LIKE '%change%' THEN aal ELSE 0 END) as b_aal_rc_fd,
+                SUM(CASE WHEN (lower(exposure) = 'fs' OR lower(exposure) LIKE '%healthcare%') AND lower(climate_change) NOT LIKE '%change%' THEN aal ELSE 0 END) as b_aal_r_fs,
+                SUM(CASE WHEN (lower(exposure) = 'fs' OR lower(exposure) LIKE '%healthcare%') AND lower(climate_change) LIKE '%change%' THEN aal ELSE 0 END) as b_aal_rc_fs,
+                SUM(CASE WHEN lower(exposure) = 'electricity' AND lower(climate_change) NOT LIKE '%change%' THEN aal ELSE 0 END) as b_aal_r_electricity,
+                SUM(CASE WHEN lower(exposure) = 'electricity' AND lower(climate_change) LIKE '%change%' THEN aal ELSE 0 END) as b_aal_rc_electricity
+            FROM {tbl}
+            WHERE {where_flood}
+            GROUP BY TRIM(LOWER({col_id_kota}))
+        ),
+        drought_agg AS (
+            SELECT 
+                TRIM(LOWER(id_kota)) as id_kota_clean,
                 SUM(aal) as aal_drought
             FROM aal_drought_sawah
             WHERE year = 2022 AND climate_change = 'ncc'
-            GROUP BY id_kota
+            GROUP BY TRIM(LOWER(id_kota))
         )
         SELECT json_build_object(
           'type',     'FeatureCollection',
@@ -241,15 +271,33 @@ class GedungRepository:
           SELECT json_build_object(
             'type',     'Feature',
             'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(k.geom, 0.01))::json,
-            'properties', to_jsonb(hak) || jsonb_build_object('aal_drought_total', COALESCE(da.aal_drought, 0))
+            'properties', to_jsonb(hak) || jsonb_build_object(
+                'id_kota', k.kota,
+                'nama_kota', k.kota,
+                'aal_drought_total', COALESCE(da.aal_drought, 0),
+                -- Use ONLY specific building data for flood (overwrites hak)
+                'aal_r_total', COALESCE(fa.b_aal_r_total, 0),
+                'aal_rc_total', COALESCE(fa.b_aal_rc_total, 0),
+                'aal_r_hotel', COALESCE(fa.b_aal_r_hotel, 0),
+                'aal_rc_hotel', COALESCE(fa.b_aal_rc_hotel, 0),
+                'aal_r_airport', COALESCE(fa.b_aal_r_airport, 0),
+                'aal_rc_airport', COALESCE(fa.b_aal_rc_airport, 0),
+                'aal_r_fs', COALESCE(fa.b_aal_r_fs, 0),
+                'aal_rc_fs', COALESCE(fa.b_aal_rc_fs, 0),
+                'aal_r_fd', COALESCE(fa.b_aal_r_fd, 0),
+                'aal_rc_fd', COALESCE(fa.b_aal_rc_fd, 0),
+                'aal_r_electricity', COALESCE(fa.b_aal_r_electricity, 0),
+                'aal_rc_electricity', COALESCE(fa.b_aal_rc_electricity, 0)
+            )
           ) AS f
-          FROM hasil_aal_kota hak
-          JOIN kota k ON lower(k.kota) = lower(hak.id_kota)
-          LEFT JOIN drought_agg da ON lower(da.id_kota) = lower(hak.id_kota)
+          FROM kota k
+          LEFT JOIN hasil_aal_kota hak ON lower(TRIM(hak.id_kota)) = lower(TRIM(k.kota))
+          LEFT JOIN drought_agg da ON da.id_kota_clean = lower(TRIM(k.kota))
+          LEFT JOIN flood_agg fa ON fa.id_kota_clean = lower(TRIM(k.kota))
         ) sub;
         """
         logger.debug("fetch_aal_kota_geojson SQL:\n%s", sql)
-        return db.session.execute(text(sql)).scalar()
+        return db.session.execute(text(sql), {"cv": cv}).scalar()
 
     @staticmethod
     def fetch_aal_drought_geojson(year=None, cc=None):
@@ -383,3 +431,46 @@ class GedungRepository:
             'features': features,
             'provincial_gempa_loss_ratios': prov_ratios
         }
+
+    @staticmethod
+    def fetch_aal_flood_building_skema2(kota: str = None) -> list[dict]:
+        """Fetch AAL and 7 Return Periods for Flood (Buildings) Skema 2."""
+        from app.models.models_database import AALFloodBuildingSkema2
+        
+        query = AALFloodBuildingSkema2.query
+        if kota:
+            query = query.filter_by(kota=kota)
+            
+        rows = query.all()
+        result = []
+        for row in rows:
+            result.append({
+                'id_kota': row.kota,
+                'climate_change': row.climate_change,
+                'exposure': row.exposure,
+                'aal': row.aal,
+                'pml_2': row.pml_2,
+                'pml_5': row.pml_5,
+                'pml_10': row.pml_10,
+                'pml_25': row.pml_25,
+                'pml_50': row.pml_50,
+                'pml_100': row.pml_100,
+                'pml_250': row.pml_250
+            })
+        return result
+
+    @staticmethod
+    def fetch_aal_flood_building(kota: str = None, cv: str = "0.15") -> list[dict]:
+        where = ["1=1"]
+        params = {}
+        if kota:
+            where.append("TRIM(LOWER(id_kota)) = TRIM(LOWER(:kota))")
+            params["kota"] = kota
+        if cv is not None:
+            where.append("cv = :cv")
+            params["cv"] = float(cv)
+            
+        sql = f"SELECT * FROM aal_flood_building WHERE {' AND '.join(where)} ORDER BY id_kota, exposure"
+        logger.debug("fetch_aal_flood_building SQL:\n%s | params: %s", sql, params)
+        rows = db.session.execute(text(sql), params).mappings().all()
+        return [dict(r) for r in rows]

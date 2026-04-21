@@ -312,9 +312,8 @@ def process_all_disasters():
     # 6) Rekap Aset Kota
     _calculate_rekap_aset(bld)
 
-    # 7) AAL
-    calculate_aal()
-    logger.debug("=== END process_all_disasters ===")
+    # 7) AAL (DISABLED: keep existing data in database)
+    # calculate_aal()
     return csv_path
 
 
@@ -451,8 +450,14 @@ def calculate_aal():
     """
     Hitung Average Annual Loss (AAL) menggunakan metode trapesium.
     Pengelompokan per KOTA dan kode_bangunan.
+    (FUNGSI INI DIMATIKAN SEMENTARA - DATA AAL LAMA DIBIARKAN DI DB)
     """
-    logger.debug("=== START calculate_aal (Trapezoid, Per-Kota) ===")
+    logger.debug("=== calculate_aal is DISABLED (keeping existing DB data) ===")
+    return
+    
+    # Original code kept below but disabled:
+    # logger.debug("=== START calculate_aal (Trapezoid, Per-Kota) ===")
+    # ... (rest of the code is implicitly disabled by the return above)
 
     path = os.path.join(DEBUG_DIR, "directloss_all.csv")
     if not os.path.exists(path):
@@ -739,7 +744,8 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
     logger.debug(f"✅ DirectLoss (recalc) saved for {bangunan_id} in single transaction")
 
     try:
-        # 4. Delta AAL per bencana
+        # 4. Delta AAL per bencana (DISABLED: keep existing AAL data)
+        """
         aal_row = db.session.query(HasilAALProvinsi).filter_by(id_kota=kota_val).one_or_none()
         if not aal_row:
             raise RuntimeError(f"AAL untuk kota '{kota_val}' tidak ditemukan. Jalankan proses AAL penuh dahulu.")
@@ -769,6 +775,8 @@ def recalc_building_directloss_and_aal(bangunan_id: str):
 
         db.session.commit()
         logger.info(f"✅ AAL incrementally updated for kota '{kota_val}'")
+        """
+        logger.debug("Incremental AAL update is DISABLED")
 
         # 5. UPDATE REKAP KOTA (FAST)
         recalc_city_rekap_only(kota_val)
@@ -835,7 +843,8 @@ def recalc_city_directloss_and_aal(kota_name: str):
     # 3) Rekap Aset Kota (Integrasi Baru)
     _calculate_rekap_aset(bld)
 
-    # 4) Hitung AAL untuk kota ini
+    # 4) Hitung AAL untuk kota ini (DISABLED: keep existing data in database)
+    """
     kota_result = defaultdict(float)
     kota_result['id_kota'] = kota_name
     grouped = bld.groupby(['kode_bangunan']).sum(numeric_only=True).reset_index()
@@ -897,8 +906,9 @@ def recalc_city_directloss_and_aal(kota_name: str):
     except Exception as e:
         logger.warning(f"⚠️ Gagal sinkronisasi Total Keseluruhan: {e}")
         db.session.rollback()
-    finally:
-        db.session.close()
+    """
+    logger.debug(f"City AAL recalc is DISABLED for {kota_name}")
+    db.session.close()
 
     logger.info(f"=== END city recalc for {kota_name} ===")
     return {"status": "success", "city": kota_name}

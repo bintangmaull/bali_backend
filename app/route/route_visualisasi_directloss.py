@@ -49,6 +49,25 @@ def aal_data():
             data[k] = 0.0
     return jsonify(data)
 
+@gedung_bp.route('/flood-building-aal', methods=['GET'])
+def get_flood_building_aal():
+    scheme = request.args.get('scheme', '1')
+    kota = request.args.get('kota')
+    cv = request.args.get('cv')
+    
+    if scheme == '2':
+        data = GedungService.get_aal_flood_building_skema2(kota=kota)
+        return jsonify({
+            "data": data,
+            "return_periods": [2, 5, 10, 25, 50, 100, 250]
+        })
+    
+    data = GedungService.get_aal_flood_building(kota=kota, cv=cv)
+    return jsonify({
+        "data": data,
+        "return_periods": [25, 50, 100, 250]
+    })
+
 # — CSV download endpoints (tanpa filter) —
 @gedung_bp.route('/gedung/download', methods=['GET'])
 def download_directloss():
@@ -128,7 +147,9 @@ def download_aal():
 
 @gedung_bp.route('/aal-kota', methods=['GET'])
 def get_aal_kota_geojson():
-    geojson = GedungService.get_aal_kota_geojson()
+    cv = request.args.get('cv', '0.15')
+    scheme = request.args.get('scheme', '1')
+    geojson = GedungService.get_aal_kota_geojson(cv=cv, scheme=scheme)
     return jsonify(geojson)
 
 @gedung_bp.route('/rekap-aset-kota', methods=['GET'])
