@@ -497,5 +497,11 @@ def get_flood_sawah_aal():
         'return_periods': return_periods
     })
 
+@gedung_bp.route('/tsunami-risk-metrics', methods=['GET'])
+def get_tsunami_risk_metrics():
+    kota = request.args.get('kota')
+    data = GedungService.get_tsunami_risk_results(kota=kota)
+    return jsonify(data)
+
 def setup_visualisasi_routes(app):
     app.register_blueprint(gedung_bp, url_prefix='/api')

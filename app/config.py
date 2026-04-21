@@ -39,7 +39,7 @@ class Config:
     DEBUG = os.getenv('DEBUG', 'True').lower() in ['true', '1', 't']
 
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'D3ployment2026!AAL')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '76e9381c8dca4b149b5c3e62f5564c783516f9f30b9549f7e52d6a5e8c9b2f4c')
     # Token expires in 7 days
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 

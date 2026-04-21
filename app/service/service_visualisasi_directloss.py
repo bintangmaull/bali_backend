@@ -65,3 +65,7 @@ class GedungService:
     def get_aal_flood_building_skema2(kota=None):
         return GedungRepository.fetch_aal_flood_building_skema2(kota=kota)
 
+    @staticmethod
+    def get_tsunami_risk_results(kota=None):
+        return GedungRepository.fetch_tsunami_risk_results(kota=kota)
+

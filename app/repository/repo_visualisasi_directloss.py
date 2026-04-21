@@ -181,10 +181,36 @@ class GedungRepository:
 
     @staticmethod
     def fetch_aal_data(kota):
+        # We join with tsunami_agg logic if we want to show it in ChartsSection 
+        # but since user wants AAL 0 for tsunami, we just ensure those keys exist.
         sql = """
-        SELECT *
-        FROM hasil_aal_kota
-        WHERE TRIM(LOWER(id_kota)) = TRIM(LOWER(:kota))
+        WITH tsunami_agg AS (
+            SELECT 
+                TRIM(LOWER(kota)) as id_kota_clean,
+                0 as aal_inundansi_total,
+                0 as aal_inundansi_hotel,
+                0 as aal_inundansi_airport,
+                0 as aal_inundansi_fd,
+                0 as aal_inundansi_fs,
+                0 as aal_inundansi_electricity,
+                0 as aal_inundansi_residential,
+                0 as aal_inundansi_bmn
+            FROM tsunami_risk_results
+            GROUP BY TRIM(LOWER(kota))
+        )
+        SELECT 
+            hak.*,
+            COALESCE(ta.aal_inundansi_total, 0) as aal_inundansi_total,
+            COALESCE(ta.aal_inundansi_hotel, 0) as aal_inundansi_hotel,
+            COALESCE(ta.aal_inundansi_airport, 0) as aal_inundansi_airport,
+            COALESCE(ta.aal_inundansi_fd, 0) as aal_inundansi_fd,
+            COALESCE(ta.aal_inundansi_fs, 0) as aal_inundansi_fs,
+            COALESCE(ta.aal_inundansi_electricity, 0) as aal_inundansi_electricity,
+            COALESCE(ta.aal_inundansi_residential, 0) as aal_inundansi_residential,
+            COALESCE(ta.aal_inundansi_bmn, 0) as aal_inundansi_bmn
+        FROM hasil_aal_kota hak
+        LEFT JOIN tsunami_agg ta ON ta.id_kota_clean = TRIM(LOWER(hak.id_kota))
+        WHERE TRIM(LOWER(hak.id_kota)) = TRIM(LOWER(:kota))
         """
         logger.debug("fetch_aal_data SQL for kota=%s", kota)
         row = db.session.execute(text(sql), {"kota": kota}).mappings().first()
@@ -262,6 +288,20 @@ class GedungRepository:
             FROM aal_drought_sawah
             WHERE year = 2022 AND climate_change = 'ncc'
             GROUP BY TRIM(LOWER(id_kota))
+        ),
+        tsunami_agg AS (
+            SELECT 
+                TRIM(LOWER(kota)) as id_kota_clean,
+                SUM(aal) as aal_inundansi_total,
+                SUM(CASE WHEN lower(exposure) = 'hotel' THEN aal ELSE 0 END) as aal_inundansi_hotel,
+                SUM(CASE WHEN lower(exposure) = 'airport' THEN aal ELSE 0 END) as aal_inundansi_airport,
+                SUM(CASE WHEN lower(exposure) LIKE '%educational%' THEN aal ELSE 0 END) as aal_inundansi_fd,
+                SUM(CASE WHEN lower(exposure) LIKE '%healthcare%' THEN aal ELSE 0 END) as aal_inundansi_fs,
+                SUM(CASE WHEN lower(exposure) = 'electricity' THEN aal ELSE 0 END) as aal_inundansi_electricity,
+                SUM(CASE WHEN lower(exposure) LIKE '%residential%' THEN aal ELSE 0 END) as aal_inundansi_residential,
+                SUM(CASE WHEN lower(exposure) LIKE '%public buildings%' THEN aal ELSE 0 END) as aal_inundansi_bmn
+            FROM tsunami_risk_results
+            GROUP BY TRIM(LOWER(kota))
         )
         SELECT json_build_object(
           'type',     'FeatureCollection',
@@ -287,13 +327,23 @@ class GedungRepository:
                 'aal_r_fd', COALESCE(fa.b_aal_r_fd, 0),
                 'aal_rc_fd', COALESCE(fa.b_aal_rc_fd, 0),
                 'aal_r_electricity', COALESCE(fa.b_aal_r_electricity, 0),
-                'aal_rc_electricity', COALESCE(fa.b_aal_rc_electricity, 0)
+                'aal_rc_electricity', COALESCE(fa.b_aal_rc_electricity, 0),
+                -- Tsunami AAL (from tsunami_risk_results, mostly 0)
+                'aal_inundansi_total', COALESCE(ta.aal_inundansi_total, 0),
+                'aal_inundansi_hotel', COALESCE(ta.aal_inundansi_hotel, 0),
+                'aal_inundansi_airport', COALESCE(ta.aal_inundansi_airport, 0),
+                'aal_inundansi_fd', COALESCE(ta.aal_inundansi_fd, 0),
+                'aal_inundansi_fs', COALESCE(ta.aal_inundansi_fs, 0),
+                'aal_inundansi_electricity', COALESCE(ta.aal_inundansi_electricity, 0),
+                'aal_inundansi_residential', COALESCE(ta.aal_inundansi_residential, 0),
+                'aal_inundansi_bmn', COALESCE(ta.aal_inundansi_bmn, 0)
             )
           ) AS f
           FROM kota k
           LEFT JOIN hasil_aal_kota hak ON lower(TRIM(hak.id_kota)) = lower(TRIM(k.kota))
           LEFT JOIN drought_agg da ON da.id_kota_clean = lower(TRIM(k.kota))
           LEFT JOIN flood_agg fa ON fa.id_kota_clean = lower(TRIM(k.kota))
+          LEFT JOIN tsunami_agg ta ON ta.id_kota_clean = lower(TRIM(k.kota))
         ) sub;
         """
         logger.debug("fetch_aal_kota_geojson SQL:\n%s", sql)
@@ -472,5 +522,19 @@ class GedungRepository:
             
         sql = f"SELECT * FROM aal_flood_building WHERE {' AND '.join(where)} ORDER BY id_kota, exposure"
         logger.debug("fetch_aal_flood_building SQL:\n%s | params: %s", sql, params)
+        rows = db.session.execute(text(sql), params).mappings().all()
+        return [dict(r) for r in rows]
+
+    @staticmethod
+    def fetch_tsunami_risk_results(kota: str = None) -> list[dict]:
+        """Fetch Tsunami Risk metrics (VaR, TVaR) from tsunami_risk_results."""
+        where = ["1=1"]
+        params = {}
+        if kota:
+            where.append("TRIM(LOWER(kota)) = TRIM(LOWER(:kota))")
+            params["kota"] = kota
+            
+        sql = f"SELECT * FROM tsunami_risk_results WHERE {' AND '.join(where)} ORDER BY kota, exposure"
+        logger.debug("fetch_tsunami_risk_results SQL:\n%s | params: %s", sql, params)
         rows = db.session.execute(text(sql), params).mappings().all()
         return [dict(r) for r in rows]

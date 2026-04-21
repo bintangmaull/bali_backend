@@ -614,3 +614,25 @@ class AALFloodBuildingSkema2(db.Model):
 
     def to_dict(self):
         return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+class TsunamiRiskResults(db.Model):
+    """Tsunami risk metrics from CSV (VaR, TVaR)."""
+    __tablename__ = 'tsunami_risk_results'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kota = db.Column(db.String(100), nullable=False)
+    exposure = db.Column(db.String(100), nullable=False)
+    aal = db.Column(db.Float, default=0)
+    actual_cv = db.Column(db.Float)
+    var_90 = db.Column(db.Float)
+    tvar_90 = db.Column(db.Float)
+    var_95 = db.Column(db.Float)
+    tvar_95 = db.Column(db.Float)
+    var_98 = db.Column(db.Float)
+    tvar_98 = db.Column(db.Float)
+    var_99 = db.Column(db.Float)
+    tvar_99 = db.Column(db.Float)
+    var_995 = db.Column(db.Float)
+    tvar_995 = db.Column(db.Float)
+
+    def to_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
